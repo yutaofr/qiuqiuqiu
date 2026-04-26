@@ -1,6 +1,11 @@
 import numpy as np
 
-from qqq_cycle.core.risk_layer import blended_state_weight
+from qqq_cycle.core.risk_layer import INTERFACE_ONLY, PRODUCTION_RISK_ENABLED, blended_state_weight
+
+
+def test_risk_layer_is_explicitly_interface_only() -> None:
+    assert INTERFACE_ONLY == "INTERFACE-ONLY / NOT PRODUCTION RISK"
+    assert PRODUCTION_RISK_ENABLED is False
 
 
 def test_blended_state_weight_uses_natural_weight_below_drift_band() -> None:

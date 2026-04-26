@@ -58,6 +58,42 @@ def summarize_numerical_health(replay: pd.DataFrame) -> dict[str, Any]:
     }
 
 
+def build_tail_diagnostics(replay: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """Return required tail diagnostic extracts from a replay table."""
+
+    frame = replay.copy()
+    cond = pd.to_numeric(frame["condition_number_reg"], errors="coerce")
+    huber = pd.to_numeric(frame["huber_weight"], errors="coerce")
+    warm = frame["is_warm"].astype(bool)
+    warm_indices = list(frame.index[warm])
+    if warm_indices:
+        boundary = int(warm_indices[0])
+        start = max(0, boundary - 10)
+        end = min(len(frame), boundary + 11)
+        warmup_boundary = frame.iloc[start:end].copy()
+    else:
+        warmup_boundary = frame.iloc[0:0].copy()
+    return {
+        "top_20_condition_number_reg": frame.loc[cond.sort_values(ascending=False).head(20).index].copy(),
+        "bottom_20_huber_weight": frame.loc[huber.sort_values(ascending=True).head(20).index].copy(),
+        "drift_flags": frame[pd.to_numeric(frame["drift_flag"], errors="coerce").fillna(0).astype(int) == 1].copy(),
+        "warmup_boundary_pm10": warmup_boundary,
+    }
+
+
+def write_tail_diagnostics(replay: pd.DataFrame, output_dir: str | Path) -> dict[str, Path]:
+    """Write required tail diagnostic CSV files."""
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    paths: dict[str, Path] = {}
+    for name, frame in build_tail_diagnostics(replay).items():
+        path = out / f"{name}.csv"
+        frame.to_csv(path, index=False)
+        paths[name] = path
+    return paths
+
+
 def write_health_summary(summary: dict[str, Any], output_dir: str | Path) -> tuple[Path, Path]:
     """Write JSON and Markdown health summaries."""
 

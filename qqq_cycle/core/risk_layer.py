@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 
+INTERFACE_ONLY = "INTERFACE-ONLY / NOT PRODUCTION RISK"
+PRODUCTION_RISK_ENABLED = False
+
 
 def blended_state_weight(
     p_t: np.ndarray,

@@ -1,0 +1,8 @@
+{
+  "missing_sources": [
+    "QQQ"
+  ],
+  "source_errors": {
+    "QQQ": "no official PIT/raw close source configured"
+  }
+}

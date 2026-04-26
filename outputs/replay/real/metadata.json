@@ -1,0 +1,16 @@
+{
+  "cache_layout": {
+    "manifests": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/manifests",
+    "raw": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/raw",
+    "staging": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/staging"
+  },
+  "missing_sources": [
+    "QQQ"
+  ],
+  "mode": "degraded",
+  "outputs": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/replay/real",
+  "source_errors": {
+    "QQQ": "no official PIT/raw close source configured"
+  },
+  "weekly_rows_staged": 1357
+}
