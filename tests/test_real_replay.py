@@ -1,7 +1,17 @@
 import json
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+import pytest
+
 from qqq_cycle.backtest.real_replay import RealReplayConfig, run_real_replay
+from qqq_cycle.data_contracts.macro_prices import (
+    CsvMacroMarketPriceStore,
+    MacroMarketPriceContract,
+    PriceBasis,
+)
+from qqq_cycle.data_contracts.pit_adjustment import DataNotAvailableError, degrade_micro_mode
 
 
 def test_real_replay_degrades_when_required_official_sources_missing(tmp_path: Path) -> None:
@@ -27,7 +37,7 @@ def test_real_replay_degrades_when_required_official_sources_missing(tmp_path: P
     assert (result.output_dir / "missing_sources.json").exists()
 
 
-def test_real_replay_degrades_when_qcc_csv_is_not_raw_asof_data(tmp_path: Path) -> None:
+def test_real_replay_degrades_when_qqq_csv_is_not_macro_price_data(tmp_path: Path) -> None:
     qqq_csv = tmp_path / "qqq_bad.csv"
     qqq_csv.write_text("date,adjusted_close\n2024-01-02,99.0\n", encoding="utf-8")
     config = RealReplayConfig(
@@ -44,4 +54,159 @@ def test_real_replay_degrades_when_qcc_csv_is_not_raw_asof_data(tmp_path: Path) 
     manifest = json.loads(result.manifest_path.read_text())
     assert manifest["mode"] == "degraded"
     assert "QQQ" in manifest["missing_sources"]
-    assert "adjusted" in manifest["source_errors"]["QQQ"].lower()
+    assert "missing required columns" in manifest["source_errors"]["QQQ"].lower()
+
+
+def test_macro_market_price_contract_loads_vendor_adjusted_close_without_pit_fields(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": ["2024-01-05", "2024-01-12"],
+            "ticker": ["QQQ", "QQQ"],
+            "close": [400.0, 405.0],
+            "source_name": ["diagnostic_vendor", "diagnostic_vendor"],
+            "fetch_timestamp": ["2024-01-12 17:00", "2024-01-12 17:00"],
+            "price_basis": [
+                "vendor_backward_adjusted",
+                "vendor_backward_adjusted",
+            ],
+        }
+    ).to_csv(path, index=False)
+
+    store = CsvMacroMarketPriceStore(path)
+    series = store.to_series("QQQ", pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-31"))
+
+    assert list(series.to_numpy()) == [400.0, 405.0]
+    assert store.price_basis == PriceBasis.VENDOR_BACKWARD_ADJUSTED
+
+
+def test_macro_market_price_contract_is_forbidden_for_micro_paths(tmp_path: Path) -> None:
+    contract = MacroMarketPriceContract(
+        trade_date=pd.Timestamp("2024-01-05"),
+        ticker="QQQ",
+        close=400.0,
+        source_name="diagnostic_vendor",
+        fetch_timestamp=pd.Timestamp("2024-01-05 17:00"),
+        price_basis=PriceBasis.OFFICIAL_MARKET_CLOSE,
+    )
+
+    with pytest.raises(DataNotAvailableError, match="MacroMarketPriceContract"):
+        degrade_micro_mode(contract)  # type: ignore[arg-type]
+
+
+def test_real_replay_uses_compliant_macro_qqq_for_state_stress_only_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    series_map = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "BAMLH0A0HYM2": pd.Series(4.0 + 0.4 * np.cos(trend * 14), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    ai_gpr = pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx)
+    qqq = 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16)))
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": qqq,
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_backward_adjusted",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    def fake_fetch(series_id: str, api_key: str, start: str, end: str) -> pd.Series:
+        del api_key, start, end
+        return series_map[series_id]
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay.fetch_fred_series", fake_fetch)
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay._load_ai_gpr", lambda *_: ai_gpr)
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    metadata = json.loads((result.output_dir / "metadata.json").read_text())
+    weekly = pd.read_csv(result.weekly_replay_path)
+
+    assert result.mode == "state_stress_only"
+    assert result.weekly_replay_path is not None
+    assert manifest["replay_scope"] == "state_stress_only"
+    assert manifest["micro_scope"] == "disabled_no_pit_micro_contract"
+    assert manifest["risk_scope"] == "disabled_no_production_rho_t"
+    assert manifest["price_basis"] == "vendor_backward_adjusted"
+    assert manifest["missing_sources"] == []
+    assert set(metadata["active_sources"]) == set(
+        ["DFII10", "DGS2", "BAMLH0A0HYM2", "NFCI", "VIXCLS", "USEPUINDXD", "AI_GPR", "QQQ"]
+    )
+    assert {
+        "week_end",
+        "L_t",
+        "T_t",
+        "P_t",
+        "E_t",
+        "H_t",
+        "I_t",
+        "state_probs_json",
+        "state_label",
+        "d_t",
+        "a_t",
+        "s_t",
+        "drift_probe_raw",
+        "drift_flag",
+    }.issubset(weekly.columns)
+    for name in ("2008_09_to_2009_06", "2020_02_to_2020_06", "2021_10_to_2022_03"):
+        assert (result.output_dir / f"event_{name}.csv").exists()
+
+
+def test_real_replay_degrades_gracefully_when_replay_warmup_is_insufficient(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2024-01-05", periods=40, freq="W-FRI")
+    series = pd.Series(np.linspace(1.0, 2.0, len(idx)), index=idx)
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": np.linspace(400.0, 420.0, len(idx)),
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "official_market_close",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay.fetch_fred_series",
+        lambda *_: series,
+    )
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay._load_ai_gpr", lambda *_: series)
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert result.mode == "degraded"
+    assert result.weekly_replay_path is None
+    assert "REPLAY_WARMUP" in manifest["missing_sources"]
+    assert "need at least 265 finite theta rows" in manifest["source_errors"]["REPLAY_WARMUP"]

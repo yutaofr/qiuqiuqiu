@@ -1,16 +1,50 @@
 {
-  "cache_layout": {
-    "manifests": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/manifests",
-    "raw": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/raw",
-    "staging": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/staging"
-  },
-  "missing_sources": [
+  "active_sources": [
+    "DFII10",
+    "DGS2",
+    "BAMLH0A0HYM2",
+    "NFCI",
+    "VIXCLS",
+    "USEPUINDXD",
+    "AI_GPR",
     "QQQ"
   ],
+  "cache_layout": {
+    "manifests": "cache/real_replay/manifests",
+    "raw": "cache/real_replay/raw",
+    "staging": "cache/real_replay/staging"
+  },
+  "data_integrity": {
+    "complete_state_inputs": false,
+    "required_columns": [
+      "DFII10",
+      "DGS2",
+      "BAMLH0A0HYM2",
+      "NFCI",
+      "VIXCLS",
+      "USEPUINDXD",
+      "AI_GPR",
+      "QQQ"
+    ],
+    "source_errors": {
+      "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
+    },
+    "weekly_rows_staged": 1357
+  },
+  "micro_scope": "disabled_no_pit_micro_contract",
+  "missing_sources": [
+    "REPLAY_WARMUP"
+  ],
   "mode": "degraded",
-  "outputs": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/replay/real",
+  "outputs": "outputs/replay/real",
+  "price_basis": "vendor_raw_close",
+  "qqq_source_names": [
+    "yahoo_chart"
+  ],
+  "replay_scope": "state_stress_only",
+  "risk_scope": "disabled_no_production_rho_t",
   "source_errors": {
-    "QQQ": "no official PIT/raw close source configured"
+    "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
   },
   "weekly_rows_staged": 1357
 }

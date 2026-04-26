@@ -19,7 +19,11 @@ from qqq_cycle.backtest.oos_eval import (
     write_health_summary,
     write_tail_diagnostics,
 )
-from qqq_cycle.data_contracts.raw_prices import CsvRawPriceStore
+from qqq_cycle.data_contracts.macro_prices import (
+    ALLOWED_REPLAY_SCOPE,
+    CsvMacroMarketPriceStore,
+    PriceBasis,
+)
 
 DEFAULT_FRED_SERIES = (
     "DFII10",
@@ -144,9 +148,15 @@ def _load_ai_gpr(url: str, start: str, end: str) -> pd.Series:
     return series.loc[(series.index >= pd.Timestamp(start)) & (series.index <= pd.Timestamp(end))]
 
 
-def _load_qcc_csv(path: Path, start: str, end: str) -> pd.Series:
-    store = CsvRawPriceStore(path)
-    return store.to_series("QQQ", pd.Timestamp(start), pd.Timestamp(end))
+def _load_qqq_macro_csv(
+    path: Path, start: str, end: str
+) -> tuple[pd.Series, PriceBasis, tuple[str, ...]]:
+    store = CsvMacroMarketPriceStore(path, replay_scope=ALLOWED_REPLAY_SCOPE)
+    return (
+        store.to_series("QQQ", pd.Timestamp(start), pd.Timestamp(end)),
+        store.price_basis,
+        store.source_names,
+    )
 
 
 def _weekly(series: pd.Series) -> pd.Series:
@@ -172,6 +182,8 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     missing_sources: list[str] = []
     source_errors: dict[str, str] = {}
     series_map: dict[str, pd.Series] = {}
+    qqq_price_basis: str | None = None
+    qqq_source_names: tuple[str, ...] = ()
 
     fred_key = os.getenv("FRED_API_KEY", "")
     if config.fetch_fred and fred_key:
@@ -202,38 +214,68 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
 
     if config.qqq_price_csv is not None:
         try:
-            qqq = _load_qcc_csv(config.qqq_price_csv, config.start, config.end)
-            qqq.to_csv(dirs["raw"] / "qqq_raw_close.csv", index_label="date")
+            qqq, price_basis, source_names = _load_qqq_macro_csv(
+                config.qqq_price_csv, config.start, config.end
+            )
+            qqq_price_basis = price_basis.value
+            qqq_source_names = source_names
+            qqq.to_csv(dirs["raw"] / "qqq_macro_close.csv", index_label="date")
             series_map["QQQ"] = qqq
         except Exception as exc:  # noqa: BLE001
             missing_sources.append("QQQ")
             source_errors["QQQ"] = str(exc)
     else:
         missing_sources.append("QQQ")
-        source_errors["QQQ"] = "no official PIT/raw close source configured"
+        source_errors["QQQ"] = "no macro market price source configured"
 
     weekly = _stage_weekly_inputs(series_map, dirs["staging"]) if series_map else pd.DataFrame()
     missing_sources = sorted(set(missing_sources + _missing(REQUIRED_STATE_COLUMNS, series_map)))
-    mode = "full" if not missing_sources else "degraded"
+    active_sources = [
+        name
+        for name in REQUIRED_STATE_COLUMNS
+        if name in series_map and name not in missing_sources
+    ]
+    mode = ALLOWED_REPLAY_SCOPE if not missing_sources else "degraded"
     weekly_replay_path: Path | None = None
-    if mode == "full":
-        bundle = build_replay_bundle(weekly[REQUIRED_STATE_COLUMNS].dropna(how="all"))
-        write_replay_outputs(bundle, config.output_dir)
-        summary = summarize_numerical_health(bundle.weekly)
-        write_health_summary(summary, config.output_dir)
-        write_tail_diagnostics(bundle.weekly, config.output_dir)
-        weekly_replay_path = config.output_dir / "weekly_replay.csv"
-    else:
-        _write_json(config.output_dir / "missing_sources.json", {"missing_sources": missing_sources, "source_errors": source_errors})
+    if mode == ALLOWED_REPLAY_SCOPE:
+        try:
+            bundle = build_replay_bundle(weekly[REQUIRED_STATE_COLUMNS].dropna(how="all"))
+            write_replay_outputs(bundle, config.output_dir)
+            summary = summarize_numerical_health(bundle.weekly)
+            write_health_summary(summary, config.output_dir)
+            write_tail_diagnostics(bundle.weekly, config.output_dir)
+            weekly_replay_path = config.output_dir / "weekly_replay.csv"
+        except RuntimeError as exc:
+            mode = "degraded"
+            missing_sources = sorted(set(missing_sources + ["REPLAY_WARMUP"]))
+            source_errors["REPLAY_WARMUP"] = str(exc)
+
+    if mode == "degraded":
+        _write_json(
+            config.output_dir / "missing_sources.json",
+            {"missing_sources": missing_sources, "source_errors": source_errors},
+        )
 
     manifest = {
         "mode": mode,
+        "replay_scope": ALLOWED_REPLAY_SCOPE,
+        "active_sources": active_sources,
+        "missing_sources": missing_sources,
+        "data_integrity": {
+            "required_columns": REQUIRED_STATE_COLUMNS,
+            "weekly_rows_staged": int(len(weekly)),
+            "complete_state_inputs": not missing_sources,
+            "source_errors": source_errors,
+        },
+        "micro_scope": "disabled_no_pit_micro_contract",
+        "risk_scope": "disabled_no_production_rho_t",
+        "price_basis": qqq_price_basis,
+        "qqq_source_names": list(qqq_source_names),
         "cache_layout": {
             "raw": str(dirs["raw"]),
             "staging": str(dirs["staging"]),
             "manifests": str(dirs["manifests"]),
         },
-        "missing_sources": missing_sources,
         "source_errors": source_errors,
         "weekly_rows_staged": int(len(weekly)),
         "outputs": str(config.output_dir),
@@ -241,4 +283,9 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     manifest_path = dirs["manifests"] / "real_replay_manifest.json"
     _write_json(manifest_path, manifest)
     _write_json(config.output_dir / "metadata.json", manifest)
-    return RealReplayResult(mode=mode, output_dir=config.output_dir, manifest_path=manifest_path, weekly_replay_path=weekly_replay_path)
+    return RealReplayResult(
+        mode=mode,
+        output_dir=config.output_dir,
+        manifest_path=manifest_path,
+        weekly_replay_path=weekly_replay_path,
+    )

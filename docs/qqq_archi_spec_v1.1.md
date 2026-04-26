@@ -156,6 +156,56 @@ ma_20 = window.mean()
 
 如果 `PITAdjustmentEngine` 不可用（数据源不支持 `asof` 语义），微观层停机，系统降级为轻量模式。
 
+### 3.5 宏观市场价格契约（state/stress replay only）
+
+`MacroMarketPriceContract` 是独立于 §3.2-3.4 PIT 微观价格契约的诊断价格契约，仅用于真实状态/应力回放。
+
+```python
+class PriceBasis(str, Enum):
+    VENDOR_BACKWARD_ADJUSTED = "vendor_backward_adjusted"
+    VENDOR_RAW_CLOSE = "vendor_raw_close"
+    OFFICIAL_MARKET_CLOSE = "official_market_close"
+
+@dataclass(frozen=True)
+class MacroMarketPriceContract:
+    trade_date: pd.Timestamp
+    ticker: str
+    close: float
+    source_name: str
+    fetch_timestamp: pd.Timestamp
+    price_basis: PriceBasis
+```
+
+CSV 导入契约要求列：
+
+- `trade_date`
+- `ticker`
+- `close`
+- `source_name`
+- `fetch_timestamp`
+- `price_basis`
+
+**使用范围限制：**
+
+- 允许：`state_stress_only` 诊断回放中的 QQQ 周价格、温度因子、风险偏好因子、状态/应力表。
+- 禁止：微观层、生产 `h_t`、生产 `rho_t`。
+- `vendor_backward_adjusted` 可用于诊断状态/应力回放，但不得被解释为 PIT 微观层合规价格。
+- 微观层仍只能使用 §3.4 `PITAdjustmentEngine`。若只有 `MacroMarketPriceContract`，微观层和生产风险层必须停机/降级。
+
+真实回放 manifest 必须显式写出：
+
+```python
+{
+    "replay_scope": "state_stress_only",
+    "active_sources": [...],
+    "missing_sources": [...],
+    "data_integrity": {...},
+    "micro_scope": "disabled_no_pit_micro_contract",
+    "risk_scope": "disabled_no_production_rho_t",
+    "price_basis": ...
+}
+```
+
 ---
 
 ## 4. 双记忆标准化模块
@@ -352,19 +402,23 @@ def initialize_from_history(self, x_hist: np.ndarray) -> CovarianceState2D:
 
 ```python
 def regularize_cov_2d(
-    cov_raw: np.ndarray, eps_abs: float, eps_rel: float
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    eigvals, eigvecs = np.linalg.eigh(cov_raw)
-    order = np.argsort(eigvals)[::-1]
-    eigvals = eigvals[order]
-    eigvecs = eigvecs[:, order]
-
-    lam1, lam2 = eigvals
-    lam2_star = max(lam2, eps_rel * lam1, eps_abs)
-    eigvals_star = np.array([lam1, lam2_star], dtype=float)
-    cov_reg = eigvecs @ np.diag(eigvals_star) @ eigvecs.T
-    return cov_reg, eigvals_star, eigvecs
+    cov_raw: np.ndarray,
+    eps_abs: float = 1e-8,
+    eps_rel: float = 1e-4,
+    *,
+    return_diagnostics: bool = False,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | tuple[
+    np.ndarray, np.ndarray, np.ndarray, dict[str, Any]
+]:
+    ...
 ```
+
+返回契约：
+
+- `return_diagnostics=False`（默认）：返回 3 元组 `(cov_reg, eigvals_star, eigvecs)`。
+- `return_diagnostics=True`：返回 4 元组 `(cov_reg, eigvals_star, eigvecs, diagnostics)`。
+- `diagnostics` 至少包含 `eigval_1`, `eigval_2_raw`, `eigval_2_reg`, `condition_number_raw`, `condition_number_reg`, `eigval_2_was_floored`。
+- 线性代数失败不得静默降级；调用方必须记录诊断并标记模块健康状态。
 
 **适用范围（数学规范 §6.7）：** 此函数用于所有 2D 协方差矩阵的正则化，包括 $\Sigma_{\Theta,t}$、$\Sigma_{v,t}$、$\Sigma_{a,t}$。
 
@@ -373,12 +427,17 @@ def regularize_cov_2d(
 ```python
 def update(self, state: CovarianceState2D, x_t: np.ndarray) -> CovarianceState2D:
     """
-    NaN policy: if x_t contains NaN, return state unchanged (skip update).
+    NaN policy:
+        If x_t contains NaN, return numeric state arrays unchanged, do not
+        advance warmup_count, and increment pending_missing_steps.
+        On the next valid update, use effective_rho = rho ** (pending_missing_steps + 1)
+        and complement weight 1 - effective_rho. Reset pending_missing_steps
+        after the successful valid update.
     """
     if np.any(np.isnan(x_t)):
-        return state
+        ...
 
-    rho = 2 ** (-1 / self.half_life)
+    effective_rho = self.rho ** (state.pending_missing_steps + 1)
     mean_prev = state.mean
     cov_reg_prev = state.cov_reg
 
@@ -389,10 +448,12 @@ def update(self, state: CovarianceState2D, x_t: np.ndarray) -> CovarianceState2D
     w = min(1.0, self.c_huber / max(maha, 1e-12))
     delta_tilde = w * delta
 
-    mean_new = rho * mean_prev + (1 - rho) * x_t
-    cov_raw_new = rho * state.cov_raw + (1 - rho) * np.outer(delta_tilde, delta_tilde)
-    cov_reg_new, eigvals_new, eigvecs_new = regularize_cov_2d(
-        cov_raw_new, self.eps_abs, self.eps_rel
+    mean_new = effective_rho * mean_prev + (1 - effective_rho) * x_t
+    cov_raw_new = effective_rho * state.cov_raw + (
+        1 - effective_rho
+    ) * np.outer(delta_tilde, delta_tilde)
+    cov_reg_new, eigvals_new, eigvecs_new, diagnostics = regularize_cov_2d(
+        cov_raw_new, self.eps_abs, self.eps_rel, return_diagnostics=True
     )
 
     return CovarianceState2D(
@@ -507,8 +568,10 @@ def rolling_quantile_diag_2d(
     quantile: float = 0.10,
 ) -> np.ndarray:
     """
-    Returns shape (T, 2, 2) diagonal matrices.
-    Uses expanding window for t < window.
+    Input is raw velocity increments delta_v, not pre-squared values.
+    The function squares delta_v internally before quantile extraction.
+    Returns shape (T, 2, 2) diagonal matrices from rolling/expanding
+    quantiles of squared increments. Uses expanding window for t < window.
     """
 ```
 

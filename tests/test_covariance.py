@@ -74,3 +74,14 @@ def test_eigval_floored_flag_and_condition_diagnostics() -> None:
     assert eigvals_reg[1] == 1e-4
     assert diagnostics["eigval_2_was_floored"] is True
     assert diagnostics["condition_number_raw"] > diagnostics["condition_number_reg"]
+
+
+def test_regularize_cov_2d_returns_three_values_unless_diagnostics_requested() -> None:
+    cov_raw = np.array([[1.0, 0.1], [0.1, 0.5]])
+
+    plain = regularize_cov_2d(cov_raw)
+    with_diagnostics = regularize_cov_2d(cov_raw, return_diagnostics=True)
+
+    assert len(plain) == 3
+    assert len(with_diagnostics) == 4
+    assert isinstance(with_diagnostics[3], dict)

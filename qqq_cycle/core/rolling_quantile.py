@@ -11,15 +11,19 @@ def rolling_quantile_diag_2d(
     quantile: float = 0.10,
     eps: float = 1e-12,
 ) -> np.ndarray:
-    """Return diagonal rolling quantile matrices for squared 2D increments.
+    """Return diagonal quantile matrices from raw 2D velocity increments.
 
     Input:
-        delta_v: Array of shape `(T, 2)` containing velocity increments.
+        delta_v: Array of shape `(T, 2)` containing raw velocity increments,
+            not pre-squared values. The function squares these increments
+            internally before quantile extraction.
         window: Rolling window length; rows before `window` use expanding history.
         quantile: Quantile applied independently to each squared coordinate.
         eps: Lower floor applied to diagonal entries.
     Output:
-        Array of shape `(T, 2, 2)` with off-diagonal entries fixed at zero.
+        Array of shape `(T, 2, 2)` containing diagonal matrices from
+        rolling/expanding quantiles of squared increments. Off-diagonal
+        entries are fixed at zero.
     Time semantics:
         Row t uses only rows `max(0, t-window+1):t`, inclusive. No future rows
         are used, and NaNs are ignored coordinate-wise.

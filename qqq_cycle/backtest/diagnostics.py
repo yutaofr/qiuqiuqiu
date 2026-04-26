@@ -27,6 +27,10 @@ EVENT_WINDOWS: dict[str, tuple[str, str]] = {
 
 REPLAY_COLUMNS = [
     "week_end",
+    "L_t",
+    "T_t",
+    "P_t",
+    "E_t",
     "H_t",
     "I_t",
     "state_probs_json",
@@ -140,6 +144,10 @@ def build_replay_bundle(inputs: pd.DataFrame) -> ReplayBundle:
         x = theta_row.to_numpy(dtype=float)
         row: dict[str, object] = {
             "week_end": week_end.strftime("%Y-%m-%d"),
+            "L_t": state.at[week_end, "L"] if week_end in state.index else np.nan,
+            "T_t": state.at[week_end, "T"] if week_end in state.index else np.nan,
+            "P_t": state.at[week_end, "P"] if week_end in state.index else np.nan,
+            "E_t": state.at[week_end, "E"] if week_end in state.index else np.nan,
             "H_t": x[0] if np.isfinite(x[0]) else np.nan,
             "I_t": x[1] if np.isfinite(x[1]) else np.nan,
             "state_probs_json": np.nan,

@@ -1,8 +1,8 @@
 {
   "missing_sources": [
-    "QQQ"
+    "REPLAY_WARMUP"
   ],
   "source_errors": {
-    "QQQ": "no official PIT/raw close source configured"
+    "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
   }
 }

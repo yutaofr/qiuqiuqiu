@@ -182,10 +182,20 @@ class InMemoryPITAdjustmentEngine(PITAdjustmentEngine):
         return pd.Series(adjusted, index=pd.DatetimeIndex(rows["trade_date"]), name=ticker)
 
 
-def degrade_micro_mode(engine: PITAdjustmentEngine | None) -> DegradedMode:
+def degrade_micro_mode(engine: object | None) -> DegradedMode:
     """Return lightweight-mode degradation when PIT adjusted prices are absent."""
 
+    if engine is not None and (
+        engine.__class__.__name__ in {"MacroMarketPriceContract", "CsvMacroMarketPriceStore"}
+        or engine.__class__.__module__.endswith("macro_prices")
+    ):
+        raise DataNotAvailableError(
+            "MacroMarketPriceContract is forbidden for micro-layer production paths"
+        )
     reason = "PIT adjustment engine unavailable"
-    if engine is not None and engine.only_hindsight_adjusted_available:
+    if (
+        isinstance(engine, PITAdjustmentEngine)
+        and engine.only_hindsight_adjusted_available
+    ):
         reason = "only hindsight-adjusted prices available"
     return DegradedMode(micro_enabled=False, h_t=None, rho_t=None, reason=reason)
