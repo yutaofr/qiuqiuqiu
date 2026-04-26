@@ -30,7 +30,8 @@ def align_series_asof(
     validate_monotonic_index(decision_index, "decision_index")
     if len(decision_index) == 0:
         return pd.Series(dtype=float, index=decision_index, name=series.name)
-    values = series.sort_index().rename("value").reset_index(names="obs_time")
+    values = series.sort_index().rename("value").reset_index()
+    values.columns = ["obs_time", "value"]
     decisions = pd.DataFrame({"decision_time": decision_index})
     aligned = pd.merge_asof(
         decisions,

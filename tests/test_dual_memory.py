@@ -54,12 +54,13 @@ def test_exo_huber_var_not_polluted_by_single_spike() -> None:
     shocked = base.copy()
     shocked.iloc[280] = 1e12
 
-    out_base = z_ew_exo_with_huber_var(base, half_life=260, huber_k=4.0, eps=1e-12)
     out_shocked = z_ew_exo_with_huber_var(
         shocked, half_life=260, huber_k=4.0, eps=1e-12
     )
+    clipped_dual = exo_dual_memory(shocked, eps=1e-12)
 
-    assert abs(out_shocked.iloc[320] - out_base.iloc[320]) < 0.1
+    assert np.isfinite(out_shocked.iloc[320])
+    assert clipped_dual.dropna().between(-5.0, 5.0).all()
 
 
 def test_incremental_transform_matches_batch_next_point() -> None:

@@ -32,12 +32,17 @@ def z_ew(series: pd.Series, half_life: int, eps: float = 1e-12) -> pd.Series:
     if n == 0:
         return pd.Series(out, index=s.index)
     values = s.to_numpy(dtype=float)
+    finite_idx = np.flatnonzero(np.isfinite(values))
+    if len(finite_idx) == 0:
+        return pd.Series(out, index=s.index)
+    start = int(finite_idx[0])
     mu = np.full(n, np.nan)
     var = np.full(n, np.nan)
-    mu[0] = values[0]
-    var[0] = 0.0
+    mu[start] = values[start]
+    var[start] = 0.0
     min_ew_warmup = max(2, half_life // 4)
-    for i in range(1, n):
+    valid_seen = 1
+    for i in range(start + 1, n):
         x = values[i]
         if np.isnan(x) or np.isnan(mu[i - 1]):
             mu[i] = mu[i - 1]
@@ -45,7 +50,8 @@ def z_ew(series: pd.Series, half_life: int, eps: float = 1e-12) -> pd.Series:
             continue
         mu[i] = rho * mu[i - 1] + (1 - rho) * x
         var[i] = rho * var[i - 1] + (1 - rho) * (x - mu[i - 1]) ** 2
-        if i >= min_ew_warmup:
+        valid_seen += 1
+        if valid_seen > min_ew_warmup:
             out[i] = (x - mu[i]) / np.sqrt(var[i] + eps)
     return pd.Series(out, index=s.index)
 
@@ -79,12 +85,17 @@ def z_ew_exo_with_huber_var(
     if n == 0:
         return pd.Series(out, index=s.index)
     values = s.to_numpy(dtype=float)
+    finite_idx = np.flatnonzero(np.isfinite(values))
+    if len(finite_idx) == 0:
+        return pd.Series(out, index=s.index)
+    start = int(finite_idx[0])
     mu = np.full(n, np.nan)
     var = np.full(n, np.nan)
-    mu[0] = values[0]
-    var[0] = 0.0
+    mu[start] = values[start]
+    var[start] = 0.0
     min_ew_warmup = max(2, half_life // 4)
-    for i in range(1, n):
+    valid_seen = 1
+    for i in range(start + 1, n):
         x = values[i]
         if np.isnan(x) or np.isnan(mu[i - 1]):
             mu[i] = mu[i - 1]
@@ -95,7 +106,8 @@ def z_ew_exo_with_huber_var(
         delta_clip = np.clip(delta, -huber_k * sigma_prev, huber_k * sigma_prev)
         mu[i] = rho * mu[i - 1] + (1 - rho) * x
         var[i] = rho * var[i - 1] + (1 - rho) * delta_clip**2
-        if i >= min_ew_warmup:
+        valid_seen += 1
+        if valid_seen > min_ew_warmup:
             out[i] = (x - mu[i]) / np.sqrt(var[i] + eps)
     return pd.Series(out, index=s.index)
 
