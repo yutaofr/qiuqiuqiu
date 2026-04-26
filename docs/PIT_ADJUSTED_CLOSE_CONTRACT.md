@@ -46,6 +46,10 @@ CUM_FAC(d) = split_factor_cum(d) * dividend_factor_cum(d)
 - `DataNotAvailableError`: no PIT source is wired.
 - `InsufficientHistoryError`: fewer than the requested number of PIT observations are available.
 
+## Fixture Engine
+
+`InMemoryPITAdjustmentEngine` exists only for deterministic contract tests and future small fixtures. It accepts explicit `PITPriceBar` records, filters every lookup by `asof_timestamp <= asof`, and applies the relative-basis scaling formula. It is not a production corporate-action backfill engine and must not be treated as evidence that real PIT vendor data is available.
+
 ## Degraded Mode
 
 If PIT adjusted prices cannot be guaranteed, the micro layer must not produce `h_t` and the risk layer must not produce production `rho_t`. The system remains in lightweight state/stress replay mode and reports `h_t = None`, `rho_t = None`.

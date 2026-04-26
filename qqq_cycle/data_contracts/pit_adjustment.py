@@ -108,6 +108,80 @@ class PITAdjustmentEngine:
         raise DataNotAvailableError("PIT adjusted-window engine is not implemented")
 
 
+class InMemoryPITAdjustmentEngine(PITAdjustmentEngine):
+    """Deterministic PIT adjustment engine for fixture and contract tests.
+
+    This is not a production data loader. It operates only on supplied
+    `PITPriceBar` records and filters every lookup by `asof_timestamp <= asof`.
+    """
+
+    def __init__(self, bars: list[PITPriceBar]) -> None:
+        super().__init__(only_hindsight_adjusted_available=False)
+        self._bars = pd.DataFrame(
+            [
+                {
+                    "trade_date": pd.Timestamp(bar.trade_date),
+                    "ticker": bar.ticker,
+                    "raw_close": float(bar.raw_close),
+                    "cum_factor": float(
+                        bar.split_factor_cum_pti * bar.dividend_factor_cum_pti
+                    ),
+                    "asof_timestamp": pd.Timestamp(bar.asof_timestamp),
+                }
+                for bar in bars
+            ]
+        )
+        if self._bars.empty:
+            self._bars = pd.DataFrame(
+                columns=["trade_date", "ticker", "raw_close", "cum_factor", "asof_timestamp"]
+            )
+        self._bars = self._bars.sort_values(["ticker", "trade_date", "asof_timestamp"])
+
+    def _visible_rows(self, ticker: str, asof: pd.Timestamp) -> pd.DataFrame:
+        asof_ts = pd.Timestamp(asof)
+        visible = self._bars[
+            (self._bars["ticker"] == ticker) & (self._bars["asof_timestamp"] <= asof_ts)
+        ]
+        if visible.empty:
+            raise DataNotAvailableError(f"no PIT rows visible for {ticker} as of {asof_ts}")
+        return visible
+
+    def _latest_visible_by_trade_date(self, ticker: str, asof: pd.Timestamp) -> pd.DataFrame:
+        visible = self._visible_rows(ticker, asof)
+        return visible.groupby("trade_date", as_index=False).tail(1).sort_values("trade_date")
+
+    def get_adj_close(
+        self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
+    ) -> float:
+        rows = self._latest_visible_by_trade_date(ticker, asof)
+        trade_ts = pd.Timestamp(trade_date)
+        row = rows[rows["trade_date"] == trade_ts]
+        if row.empty:
+            raise DataNotAvailableError(
+                f"no PIT close for {ticker} trade_date={trade_ts} as of {pd.Timestamp(asof)}"
+            )
+        rec = row.iloc[-1]
+        return float(rec["raw_close"] * rec["cum_factor"])
+
+    def get_adjusted_window(
+        self, ticker: str, end_date: pd.Timestamp, window: int, asof: pd.Timestamp
+    ) -> pd.Series:
+        if window < 1:
+            raise ValueError("window must be >= 1")
+        rows = self._latest_visible_by_trade_date(ticker, asof)
+        end_ts = pd.Timestamp(end_date)
+        rows = rows[rows["trade_date"] <= end_ts].tail(window)
+        if len(rows) < window:
+            raise InsufficientHistoryError(
+                f"need {window} PIT rows for {ticker} ending {end_ts}; got {len(rows)}"
+            )
+        basis = rows.iloc[-1]["cum_factor"]
+        adjusted = rows["raw_close"].to_numpy(dtype=float) * (
+            float(basis) / rows["cum_factor"].to_numpy(dtype=float)
+        )
+        return pd.Series(adjusted, index=pd.DatetimeIndex(rows["trade_date"]), name=ticker)
+
+
 def degrade_micro_mode(engine: PITAdjustmentEngine | None) -> DegradedMode:
     """Return lightweight-mode degradation when PIT adjusted prices are absent."""
 

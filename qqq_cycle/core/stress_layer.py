@@ -9,6 +9,7 @@ import pandas as pd
 
 from qqq_cycle.core.covariance import CovarianceState2D, RobustEWCov2D, regularize_cov_2d
 from qqq_cycle.core.dual_memory import z_rob
+from qqq_cycle.core.rolling_quantile import rolling_quantile_diag_2d
 
 
 def logistic(x: float | np.ndarray) -> float | np.ndarray:
@@ -37,15 +38,7 @@ class StressResult:
 def rolling_noise_floor(delta_v: np.ndarray, window: int = 520, quantile: float = 0.10) -> np.ndarray:
     """Return exact expanding/rolling diagonal quantile noise floors."""
 
-    delta = np.asarray(delta_v, dtype=float)
-    out = np.zeros((len(delta), 2, 2), dtype=float)
-    sq = delta**2
-    for i in range(len(delta)):
-        start = max(0, i - window + 1)
-        vals = sq[start : i + 1]
-        q = np.nanquantile(vals, quantile, axis=0)
-        out[i] = np.diag(np.maximum(q, 1e-12))
-    return out
+    return rolling_quantile_diag_2d(delta_v, window=window, quantile=quantile)
 
 
 def compute_stress_layer(
@@ -103,9 +96,7 @@ def compute_stress_layer(
 
         state_v = cov_v.update(state_v, v)
         state_a = cov_a.update(state_a, delta_a)
-        hist = np.asarray(delta_v_hist[-520:], dtype=float)
-        q = np.nanquantile(hist**2, 0.10, axis=0)
-        noise = np.diag(np.maximum(q, 1e-12))
+        noise = rolling_quantile_diag_2d(np.asarray(delta_v_hist[-520:], dtype=float))[-1]
         state_a.cov_raw = state_a.cov_raw + noise
         state_a.cov_reg, state_a.eigvals, state_a.eigvecs = regularize_cov_2d(
             state_a.cov_raw,
