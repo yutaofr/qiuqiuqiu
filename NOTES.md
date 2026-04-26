@@ -14,6 +14,8 @@
 - `Lambda` is defined as the standard logistic function because the model spec names it but does not define a different map.
 - NaN rows are not imputed. For EW recursions with elapsed missing weeks, the next valid update uses `effective_rho = rho ** k` and the complement weight `1 - effective_rho`, preserving total EW weight mass.
 - Pandas 3.0.1 rolling behavior is pinned in `pyproject.toml`; tests cover `min_periods` and NaN masking behavior used by dual-memory normalization.
+- Replay tables are diagnostic only. They include state/stress probabilities and labels, but they do not compute returns, micro-layer `h_t`, risk-layer `rho_t`, or production risk decisions.
+- The drift probe is the minimum physical-space implementation from the v2.2 spec: 520-week rolling empirical percentiles, EW physical `H_raw`, rolling median/MAD baseline, and `|drift_probe_raw| >= 1.8` flagging.
 
 ## Performance And MLX
 
@@ -23,8 +25,9 @@
 ## Remaining Blockers
 
 - Real FRED fetching is not implemented in this slice.
-- PIT adjusted-close contracts and the micro layer remain blocked until the PIT adjustment engine and historical constituent/weight data contracts are implemented.
-- Drift probe, risk layer, and full historical backtests are out of scope for this first slice.
+- The PIT adjusted-close engine is a fail-closed interface contract only; no corporate-action backfill engine is implemented.
+- The micro layer remains blocked until the PIT adjustment engine and historical constituent/weight data contracts are implemented.
+- Risk layer production outputs and full historical return backtests are out of scope.
 
 ## Sample Diagnostic Log Output
 

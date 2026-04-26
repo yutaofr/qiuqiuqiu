@@ -103,7 +103,9 @@ def compute_stress_layer(
 
         state_v = cov_v.update(state_v, v)
         state_a = cov_a.update(state_a, delta_a)
-        noise = rolling_noise_floor(np.asarray(delta_v_hist))[-1]
+        hist = np.asarray(delta_v_hist[-520:], dtype=float)
+        q = np.nanquantile(hist**2, 0.10, axis=0)
+        noise = np.diag(np.maximum(q, 1e-12))
         state_a.cov_raw = state_a.cov_raw + noise
         state_a.cov_reg, state_a.eigvals, state_a.eigvecs = regularize_cov_2d(
             state_a.cov_raw,

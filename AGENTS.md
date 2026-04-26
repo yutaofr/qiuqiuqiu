@@ -21,6 +21,7 @@ Hard constraints:
 - Write tests before or together with implementation. No untested code.
 - Prefer minimal, auditable patches over broad refactors.
 - If a dependency is missing or a data contract is impossible, do not fake it. Raise a clear error or put the module into degraded mode.
+- When given a commit hash boundary, always audit and report against that exact boundary using git show --name-only <commit> or the target diff, not against a verbal file list.
 
 Environment:
 
