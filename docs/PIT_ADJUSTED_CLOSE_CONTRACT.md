@@ -22,12 +22,14 @@ Data is knowable at time `t` only if its source timestamp is less than or equal 
 - Raw closes with exchange trade dates and publication timestamps.
 - Split and dividend action records with effective dates and source/as-of timestamps.
 - Internally archived daily PIT price bars and corporate-action factors.
+- Local raw-close CSV imports only when they include `trade_date`, `ticker`, `raw_close`, and `asof_timestamp`. The loader rejects adjusted-close fields.
 
 ## Forbidden Sources
 
 - Hindsight-adjusted close series that rewrite historical prices using future corporate actions.
 - Vendor total-return or adjusted-close histories without as-of factor history.
 - Any price window whose adjustment basis was not knowable on or before the requested `asof_timestamp`.
+- Generic `close` or `adjusted_close` CSVs without explicit raw/as-of semantics.
 
 ## Engine Interface
 

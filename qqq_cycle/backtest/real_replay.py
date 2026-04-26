@@ -19,6 +19,7 @@ from qqq_cycle.backtest.oos_eval import (
     write_health_summary,
     write_tail_diagnostics,
 )
+from qqq_cycle.data_contracts.raw_prices import CsvRawPriceStore
 
 DEFAULT_FRED_SERIES = (
     "DFII10",
@@ -144,17 +145,8 @@ def _load_ai_gpr(url: str, start: str, end: str) -> pd.Series:
 
 
 def _load_qcc_csv(path: Path, start: str, end: str) -> pd.Series:
-    raw = pd.read_csv(path)
-    date_col = next((c for c in raw.columns if c.lower() in {"date", "trade_date"}), None)
-    value_col = next((c for c in raw.columns if c.lower() in {"close", "raw_close"}), None)
-    if date_col is None or value_col is None:
-        raise ValueError("QQQ CSV must include date/trade_date and close/raw_close columns")
-    series = pd.Series(
-        pd.to_numeric(raw[value_col], errors="coerce").to_numpy(),
-        index=pd.to_datetime(raw[date_col]),
-        name="QQQ",
-    ).dropna()
-    return series.loc[(series.index >= pd.Timestamp(start)) & (series.index <= pd.Timestamp(end))]
+    store = CsvRawPriceStore(path)
+    return store.to_series("QQQ", pd.Timestamp(start), pd.Timestamp(end))
 
 
 def _weekly(series: pd.Series) -> pd.Series:
