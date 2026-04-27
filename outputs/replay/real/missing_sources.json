@@ -1,0 +1,13 @@
+{
+  "missing_sources": [
+    "BAMLH0A0HYM2",
+    "NFCI",
+    "USEPUINDXD"
+  ],
+  "source_errors": {
+    "BAMLH0A0HYM2": "HTTP Error 500: Internal Server Error",
+    "BAMLH0A0HYM2_splice": "Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'RangeIndex'",
+    "NFCI": "HTTP Error 500: Internal Server Error",
+    "USEPUINDXD": "HTTP Error 500: Internal Server Error"
+  }
+}

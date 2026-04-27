@@ -2,20 +2,17 @@
   "active_sources": [
     "DFII10",
     "DGS2",
-    "BAMLH0A0HYM2",
-    "NFCI",
     "VIXCLS",
-    "USEPUINDXD",
     "AI_GPR",
     "QQQ"
   ],
   "cache_layout": {
-    "manifests": "cache/real_replay/manifests",
-    "raw": "cache/real_replay/raw",
-    "staging": "cache/real_replay/staging"
+    "manifests": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/manifests",
+    "raw": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/raw",
+    "staging": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/staging"
   },
   "data_integrity": {
-    "complete_state_inputs": true,
+    "complete_state_inputs": false,
     "required_columns": [
       "DFII10",
       "DGS2",
@@ -26,47 +23,29 @@
       "AI_GPR",
       "QQQ"
     ],
-    "source_errors": {},
+    "source_errors": {
+      "BAMLH0A0HYM2": "HTTP Error 500: Internal Server Error",
+      "BAMLH0A0HYM2_splice": "Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'RangeIndex'",
+      "NFCI": "HTTP Error 500: Internal Server Error",
+      "USEPUINDXD": "HTTP Error 500: Internal Server Error"
+    },
     "weekly_rows_staged": 1357
   },
-  "hyoas_archive_manifest": {
-    "audit_grade": "conditional",
-    "boundary_checks": [
-      {
-        "max_abs_diff": null,
-        "overlap_rows": 0,
-        "status": "ok",
-        "tolerance": 1e-08
-      }
-    ],
-    "download_timestamp": "2026-04-27T14:47:30Z",
-    "hyoas_source": "csv_override",
-    "max_date": "2022-03-31",
-    "min_date": "2000-01-03",
-    "production_eligible": false,
-    "row_count": 5807,
-    "sha256": "9ce341fe37f1b4b9d3779a3ef3229944493a5d601bb134db9f0e5377d4082cb7",
-    "source_url": "https://raw.githubusercontent.com/csaladenes/eco-archive/main/BAMLH0A0HYM2.csv",
-    "supplemental_sources": [
-      {
-        "max_date": "2022-03-31",
-        "min_date": "2021-03-22",
-        "row_count": 269,
-        "sha256": "426d5ec05593ef167dcef334fa1abac3cf77b4ca0755a1cd4be079151cfbe497",
-        "source_url": "https://equibles.com/economicdata/bamlh0a0hym2"
-      }
-    ]
-  },
-  "hyoas_source": "csv_override",
+  "hyoas_archive_manifest": null,
+  "hyoas_source": "fred_api",
   "hyoas_splice_method": null,
   "insufficient_series": [],
   "micro_scope": "disabled_no_pit_micro_contract",
-  "missing_sources": [],
-  "mode": "state_stress_only",
-  "outputs": "outputs/replay/real",
+  "missing_sources": [
+    "BAMLH0A0HYM2",
+    "NFCI",
+    "USEPUINDXD"
+  ],
+  "mode": "degraded",
+  "outputs": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/outputs/replay/real",
   "price_basis": "vendor_raw_close",
   "qqq_source_names": [
-    "yahoo_chart"
+    "yahoo_finance_cache"
   ],
   "replay_scope": "state_stress_only",
   "risk_scope": "disabled_no_production_rho_t",
@@ -75,11 +54,6 @@
       "max_date": "2025-12-31",
       "min_date": "2000-01-01",
       "rows": 9497
-    },
-    "BAMLH0A0HYM2": {
-      "max_date": "2022-03-31",
-      "min_date": "2000-01-03",
-      "rows": 5807
     },
     "DFII10": {
       "max_date": "2025-12-31",
@@ -91,20 +65,10 @@
       "min_date": "2000-01-03",
       "rows": 6502
     },
-    "NFCI": {
-      "max_date": "2025-12-26",
-      "min_date": "2000-01-07",
-      "rows": 1356
-    },
     "QQQ": {
       "max_date": "2025-12-30",
       "min_date": "2000-01-03",
       "rows": 6538
-    },
-    "USEPUINDXD": {
-      "max_date": "2025-12-31",
-      "min_date": "2000-01-01",
-      "rows": 9497
     },
     "VIXCLS": {
       "max_date": "2025-12-31",
@@ -112,6 +76,11 @@
       "rows": 6567
     }
   },
-  "source_errors": {},
+  "source_errors": {
+    "BAMLH0A0HYM2": "HTTP Error 500: Internal Server Error",
+    "BAMLH0A0HYM2_splice": "Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'RangeIndex'",
+    "NFCI": "HTTP Error 500: Internal Server Error",
+    "USEPUINDXD": "HTTP Error 500: Internal Server Error"
+  },
   "weekly_rows_staged": 1357
 }
