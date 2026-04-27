@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -68,6 +70,9 @@ class RealReplayConfig:
     # column names are detected flexibly. Recommended span >=10 years (>=525 daily rows).
     # When None and FRED history is insufficient, an auto-splice is built from BAA10Y.
     hyoas_csv: Path | None = None
+    hyoas_source_url: str | None = None
+    hyoas_supplemental_csv: Path | None = None
+    hyoas_supplemental_source_url: str | None = None
     ai_gpr_url: str = AI_GPR_OFFICIAL_PAGE
 
 
@@ -95,6 +100,10 @@ def _ensure_cache_dirs(root: Path) -> dict[str, Path]:
 def _write_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def fetch_fred_series(series_id: str, api_key: str, start: str, end: str) -> pd.Series:
@@ -200,6 +209,68 @@ def _load_hyoas_csv(path: Path, start: str, end: str) -> pd.Series:
     return series.sort_index()
 
 
+def _archive_manifest(
+    *,
+    path: Path,
+    source_url: str | None,
+    series: pd.Series,
+    hyoas_source: str,
+    supplemental_sources: list[dict[str, object]] | None = None,
+    boundary_checks: list[dict[str, object]] | None = None,
+) -> dict[str, object]:
+    finite = series.dropna()
+    return {
+        "source_url": source_url or str(path),
+        "download_timestamp": _utc_now_iso(),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "min_date": finite.index.min().strftime("%Y-%m-%d"),
+        "max_date": finite.index.max().strftime("%Y-%m-%d"),
+        "row_count": int(len(finite)),
+        "hyoas_source": hyoas_source,
+        "audit_grade": "conditional",
+        "production_eligible": False,
+        "supplemental_sources": supplemental_sources or [],
+        "boundary_checks": boundary_checks or [],
+    }
+
+
+def _splice_hyoas_supplement(
+    primary: pd.Series,
+    supplement: pd.Series,
+    *,
+    tolerance: float = 1e-8,
+) -> tuple[pd.Series, list[dict[str, object]]]:
+    overlap = primary.index.intersection(supplement.index)
+    checks: list[dict[str, object]] = []
+    if len(overlap) > 0:
+        diff = (primary.loc[overlap] - supplement.loc[overlap]).abs()
+        max_abs_diff = float(diff.max())
+        status = "ok" if max_abs_diff <= tolerance else "conflict"
+        checks.append(
+            {
+                "overlap_rows": int(len(overlap)),
+                "max_abs_diff": max_abs_diff,
+                "tolerance": tolerance,
+                "status": status,
+            }
+        )
+        if status != "ok":
+            raise ValueError(
+                f"HYOAS supplemental overlap conflict: max_abs_diff={max_abs_diff}"
+            )
+    else:
+        checks.append(
+            {
+                "overlap_rows": 0,
+                "max_abs_diff": None,
+                "tolerance": tolerance,
+                "status": "ok",
+            }
+        )
+    combined = pd.concat([primary, supplement[~supplement.index.isin(primary.index)]])
+    return combined.sort_index(), checks
+
+
 def _build_hyoas_splice(
     fred_key: str,
     start: str,
@@ -298,6 +369,42 @@ def _insufficient(
     ]
 
 
+def _window_coverage(
+    output_dir: Path,
+    hyoas_max_date: str | None,
+) -> pd.DataFrame:
+    from qqq_cycle.backtest.diagnostics import EVENT_WINDOWS
+
+    rows: list[dict[str, object]] = []
+    hyoas_max = pd.Timestamp(hyoas_max_date) if hyoas_max_date else None
+    for name, (_, end) in EVENT_WINDOWS.items():
+        path = output_dir / f"event_{name}.csv"
+        frame = pd.read_csv(path) if path.exists() else pd.DataFrame()
+        rows_total = int(len(frame))
+        rows_finite_h = int(pd.to_numeric(frame.get("H_t"), errors="coerce").notna().sum()) if rows_total else 0
+        rows_finite_s = int(pd.to_numeric(frame.get("s_t"), errors="coerce").notna().sum()) if rows_total else 0
+        coverage_ok = rows_total > 0 and rows_finite_h / rows_total >= 0.95
+        window_status = "ok" if coverage_ok else "incomplete"
+        last_week_end = (
+            pd.to_datetime(frame["week_end"]).max()
+            if rows_total and "week_end" in frame
+            else pd.Timestamp(end)
+        )
+        if hyoas_max is not None and hyoas_max < last_week_end:
+            window_status = "incomplete_due_to_hyoas_coverage"
+        rows.append(
+            {
+                "window": name,
+                "rows_total": rows_total,
+                "rows_finite_H_t": rows_finite_h,
+                "rows_finite_s_t": rows_finite_s,
+                "coverage_ok": bool(coverage_ok),
+                "window_status": window_status,
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     """Run official-source replay when possible, otherwise degrade explicitly."""
 
@@ -311,6 +418,9 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     qqq_source_names: tuple[str, ...] = ()
     hyoas_source: str = "fred_api"
     hyoas_splice_method: str | None = None
+    hyoas_archive_manifest: dict[str, object] | None = None
+    hyoas_supplemental_sources: list[dict[str, object]] = []
+    hyoas_boundary_checks: list[dict[str, object]] = []
 
     fred_key = os.getenv("FRED_API_KEY", "")
     if config.fetch_fred and fred_key:
@@ -331,9 +441,37 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     if config.hyoas_csv is not None:
         try:
             hyoas = _load_hyoas_csv(config.hyoas_csv, config.start, config.end)
+            if config.hyoas_supplemental_csv is not None:
+                supplemental = _load_hyoas_csv(
+                    config.hyoas_supplemental_csv, config.start, config.end
+                )
+                hyoas, hyoas_boundary_checks = _splice_hyoas_supplement(
+                    hyoas, supplemental
+                )
+                supplemental_finite = supplemental.dropna()
+                hyoas_supplemental_sources.append(
+                    {
+                        "source_url": config.hyoas_supplemental_source_url
+                        or str(config.hyoas_supplemental_csv),
+                        "sha256": hashlib.sha256(
+                            Path(config.hyoas_supplemental_csv).read_bytes()
+                        ).hexdigest(),
+                        "min_date": supplemental_finite.index.min().strftime("%Y-%m-%d"),
+                        "max_date": supplemental_finite.index.max().strftime("%Y-%m-%d"),
+                        "row_count": int(len(supplemental_finite)),
+                    }
+                )
             hyoas.to_csv(dirs["raw"] / "fred_BAMLH0A0HYM2.csv", index_label="date")
             series_map["BAMLH0A0HYM2"] = hyoas
             hyoas_source = "csv_override"
+            hyoas_archive_manifest = _archive_manifest(
+                path=Path(config.hyoas_csv),
+                source_url=config.hyoas_source_url,
+                series=hyoas,
+                hyoas_source=hyoas_source,
+                supplemental_sources=hyoas_supplemental_sources,
+                boundary_checks=hyoas_boundary_checks,
+            )
             missing_sources = [s for s in missing_sources if s != "BAMLH0A0HYM2"]
             source_errors.pop("BAMLH0A0HYM2", None)
         except Exception as exc:  # noqa: BLE001 - CSV load failure is non-fatal
@@ -411,6 +549,10 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
             config.output_dir / "missing_sources.json",
             {"missing_sources": missing_sources, "source_errors": source_errors},
         )
+    else:
+        stale_missing = config.output_dir / "missing_sources.json"
+        if stale_missing.exists():
+            stale_missing.unlink()
 
     series_coverage = {
         name: {
@@ -422,6 +564,12 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         if name in series_map and not series_map[name].dropna().empty
     }
     insufficient_series = _insufficient(REQUIRED_STATE_COLUMNS, series_map)
+    if hyoas_archive_manifest is not None:
+        _write_json(config.output_dir / "hyoas_archive_manifest.json", hyoas_archive_manifest)
+    hyoas_max_date = series_coverage.get("BAMLH0A0HYM2", {}).get("max_date")
+    if weekly_replay_path is not None:
+        coverage = _window_coverage(config.output_dir, hyoas_max_date)
+        coverage.to_csv(config.output_dir / "event_window_coverage.csv", index=False)
 
     manifest = {
         "mode": mode,
@@ -439,6 +587,7 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         "price_basis": qqq_price_basis,
         "qqq_source_names": list(qqq_source_names),
         "hyoas_source": hyoas_source,
+        "hyoas_archive_manifest": hyoas_archive_manifest,
         "hyoas_splice_method": hyoas_splice_method,
         "series_coverage": series_coverage,
         "insufficient_series": insufficient_series,

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import hashlib
 
 import numpy as np
 import pandas as pd
@@ -150,6 +151,7 @@ def test_real_replay_uses_compliant_macro_qqq_for_state_stress_only_outputs(
     assert manifest["risk_scope"] == "disabled_no_production_rho_t"
     assert manifest["price_basis"] == "vendor_backward_adjusted"
     assert manifest["missing_sources"] == []
+    assert not (result.output_dir / "missing_sources.json").exists()
     assert set(metadata["active_sources"]) == set(
         ["DFII10", "DGS2", "BAMLH0A0HYM2", "NFCI", "VIXCLS", "USEPUINDXD", "AI_GPR", "QQQ"]
     )
@@ -210,6 +212,207 @@ def test_real_replay_degrades_gracefully_when_replay_warmup_is_insufficient(
     assert result.weekly_replay_path is None
     assert "REPLAY_WARMUP" in manifest["missing_sources"]
     assert "need at least 265 finite theta rows" in manifest["source_errors"]["REPLAY_WARMUP"]
+
+
+def test_real_replay_accepts_series_csv_override_for_historical_archive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    live_map = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    archive_csv = tmp_path / "BAMLH0A0HYM2.csv"
+    pd.DataFrame(
+        {
+            "DATE": idx[:900],
+            "BAMLH0A0HYM2": 4.0 + 0.4 * np.cos(trend[:900] * 14),
+        }
+    ).to_csv(archive_csv, index=False)
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16))),
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_raw_close",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    def fake_fetch(series_id: str, api_key: str, start: str, end: str) -> pd.Series:
+        del api_key, start, end
+        return live_map[series_id]
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay.fetch_fred_series", fake_fetch)
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay._load_ai_gpr",
+        lambda *_: pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx),
+    )
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+            hyoas_csv=archive_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert result.mode == "state_stress_only"
+    assert result.weekly_replay_path is not None
+    assert manifest["hyoas_source"] == "csv_override"
+    assert manifest["series_coverage"]["BAMLH0A0HYM2"]["rows"] == 900
+
+
+def test_real_replay_writes_hyoas_archive_manifest_and_window_coverage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    live_map = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    archive_idx = idx[idx <= pd.Timestamp("2021-03-19")]
+    archive_csv = tmp_path / "BAMLH0A0HYM2.csv"
+    pd.DataFrame(
+        {
+            "DATE": archive_idx,
+            "BAMLH0A0HYM2": 4.0 + 0.4 * np.cos(np.linspace(0.0, 1.0, len(archive_idx)) * 14),
+        }
+    ).to_csv(archive_csv, index=False)
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16))),
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_raw_close",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay.fetch_fred_series",
+        lambda sid, *_: live_map[sid],
+    )
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay._load_ai_gpr",
+        lambda *_: pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx),
+    )
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay._utc_now_iso",
+        lambda: "2026-04-27T00:00:00Z",
+    )
+
+    source_url = "https://raw.githubusercontent.com/csaladenes/eco-archive/main/BAMLH0A0HYM2.csv"
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+            hyoas_csv=archive_csv,
+            hyoas_source_url=source_url,
+        )
+    )
+
+    archive_manifest = json.loads((result.output_dir / "hyoas_archive_manifest.json").read_text())
+    assert archive_manifest["source_url"] == source_url
+    assert archive_manifest["download_timestamp"] == "2026-04-27T00:00:00Z"
+    assert archive_manifest["sha256"] == hashlib.sha256(archive_csv.read_bytes()).hexdigest()
+    assert archive_manifest["min_date"] == archive_idx.min().strftime("%Y-%m-%d")
+    assert archive_manifest["max_date"] == archive_idx.max().strftime("%Y-%m-%d")
+    assert archive_manifest["row_count"] == len(archive_idx)
+    assert archive_manifest["hyoas_source"] == "csv_override"
+    assert archive_manifest["audit_grade"] == "conditional"
+    assert archive_manifest["production_eligible"] is False
+
+    coverage = pd.read_csv(result.output_dir / "event_window_coverage.csv")
+    third = coverage[coverage["window"] == "2021_10_to_2022_03"].iloc[0]
+    assert third["coverage_ok"] == np.False_
+    assert third["window_status"] == "incomplete_due_to_hyoas_coverage"
+
+
+def test_real_replay_splices_hyoas_supplement_with_boundary_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    live_map = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    primary_idx = idx[idx <= pd.Timestamp("2021-03-19")]
+    supplement_idx = idx[
+        (idx >= pd.Timestamp("2021-03-26")) & (idx <= pd.Timestamp("2022-03-31"))
+    ]
+    primary_csv = tmp_path / "BAMLH0A0HYM2_primary.csv"
+    supplement_csv = tmp_path / "BAMLH0A0HYM2_supplement.csv"
+    pd.DataFrame({"DATE": primary_idx, "BAMLH0A0HYM2": 3.0}).to_csv(
+        primary_csv, index=False
+    )
+    pd.DataFrame({"DATE": supplement_idx, "BAMLH0A0HYM2": 3.5}).to_csv(
+        supplement_csv, index=False
+    )
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16))),
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_raw_close",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay.fetch_fred_series",
+        lambda sid, *_: live_map[sid],
+    )
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay._load_ai_gpr",
+        lambda *_: pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx),
+    )
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+            hyoas_csv=primary_csv,
+            hyoas_source_url="primary-url",
+            hyoas_supplemental_csv=supplement_csv,
+            hyoas_supplemental_source_url="supplement-url",
+        )
+    )
+
+    archive_manifest = json.loads((result.output_dir / "hyoas_archive_manifest.json").read_text())
+    coverage = pd.read_csv(result.output_dir / "event_window_coverage.csv")
+    third = coverage[coverage["window"] == "2021_10_to_2022_03"].iloc[0]
+
+    assert archive_manifest["max_date"] == supplement_idx.max().strftime("%Y-%m-%d")
+    assert archive_manifest["supplemental_sources"][0]["source_url"] == "supplement-url"
+    assert archive_manifest["boundary_checks"][0]["status"] == "ok"
+    assert third["coverage_ok"] == np.True_
+    assert third["window_status"] == "ok"
 
 
 def test_real_replay_uses_hyoas_csv_override_for_state_stress_only_outputs(

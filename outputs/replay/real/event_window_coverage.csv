@@ -1,0 +1,4 @@
+window,rows_total,rows_finite_H_t,rows_finite_s_t,coverage_ok,window_status
+2008_09_to_2009_06,43,43,43,True,ok
+2020_02_to_2020_06,21,21,21,True,ok
+2021_10_to_2022_03,26,26,26,True,ok

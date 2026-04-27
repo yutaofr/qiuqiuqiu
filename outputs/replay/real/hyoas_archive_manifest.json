@@ -1,0 +1,28 @@
+{
+  "audit_grade": "conditional",
+  "boundary_checks": [
+    {
+      "max_abs_diff": null,
+      "overlap_rows": 0,
+      "status": "ok",
+      "tolerance": 1e-08
+    }
+  ],
+  "download_timestamp": "2026-04-27T14:47:30Z",
+  "hyoas_source": "csv_override",
+  "max_date": "2022-03-31",
+  "min_date": "2000-01-03",
+  "production_eligible": false,
+  "row_count": 5807,
+  "sha256": "9ce341fe37f1b4b9d3779a3ef3229944493a5d601bb134db9f0e5377d4082cb7",
+  "source_url": "https://raw.githubusercontent.com/csaladenes/eco-archive/main/BAMLH0A0HYM2.csv",
+  "supplemental_sources": [
+    {
+      "max_date": "2022-03-31",
+      "min_date": "2021-03-22",
+      "row_count": 269,
+      "sha256": "426d5ec05593ef167dcef334fa1abac3cf77b4ca0755a1cd4be079151cfbe497",
+      "source_url": "https://equibles.com/economicdata/bamlh0a0hym2"
+    }
+  ]
+}
