@@ -1,0 +1,22 @@
+stage,first_available_raw_date,first_finite_transformed_date,first_finite_weekly_date,first_date_usable_for_state_probability,first_date_usable_for_stress,blocking_reason
+DFII10,2003-01-02,,2003-01-03,,,
+DGS2,2000-01-03,,2000-01-07,,,
+BAMLH0A0HYM2,2000-01-03,,2000-01-07,,,
+NFCI,2000-01-07,,2000-01-07,,,
+VIXCLS,2000-01-03,,2000-01-07,,,
+USEPUINDXD,2000-01-01,,2000-01-07,,,
+AI_GPR,2000-01-01,,2000-01-07,,,
+QQQ,2000-01-03,,2000-01-07,,,
+L_t,,2004-12-31,2004-12-31,,,
+T_t,,2004-12-24,2004-12-24,,,
+P_t,,2002-10-04,2002-10-04,,,
+E_t,,2004-12-31,2004-12-31,,2008-02-01,
+H_t,,2004-12-31,2004-12-31,2010-01-22,2008-02-01,
+I_t,,2005-01-28,2005-01-28,2010-01-22,2008-02-01,
+d_t,,2005-02-04,2005-02-04,,2005-02-04,
+a_t,,2005-02-04,2005-02-04,,2005-02-04,
+s_t,,2008-02-01,2008-02-01,,2008-02-01,
+drift_probe_raw,,2003-01-03,2003-01-03,,,
+covariance_warmup,,2005-01-28,,2010-01-15,,"requires 260 finite Theta(H,I) updates; NaN Theta rows do not advance warmup_count"
+prototype_state_assignment_warmup,,2010-01-15,,2010-01-22,,requires initialized prototypes after the 260 finite-Theta covariance warmup; current replay emits the first non-WARMUP label on the next finite week
+state_label,,,,2010-01-22,,locked until covariance warmup and prototype initialization complete

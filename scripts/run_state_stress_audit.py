@@ -12,12 +12,15 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qqq_cycle.backtest.state_stress_audit import (
+    build_warmup_dependency_map,
     build_replay_with_hyoas_source,
+    explain_warmup_boundary,
     freeze_replay_baseline,
     sha256_file,
     summarize_source_sensitivity,
     write_behavior_audits,
     write_source_sensitivity_report,
+    write_warmup_explanation,
 )
 
 
@@ -64,6 +67,35 @@ def _load_weekly_inputs(path: Path) -> pd.DataFrame:
     return frame
 
 
+def _raw_first_dates(raw_dir: Path) -> dict[str, str | None]:
+    paths = {
+        "DFII10": raw_dir / "fred_DFII10.csv",
+        "DGS2": raw_dir / "fred_DGS2.csv",
+        "BAMLH0A0HYM2": raw_dir / "fred_BAMLH0A0HYM2.csv",
+        "NFCI": raw_dir / "fred_NFCI.csv",
+        "VIXCLS": raw_dir / "fred_VIXCLS.csv",
+        "USEPUINDXD": raw_dir / "fred_USEPUINDXD.csv",
+        "AI_GPR": raw_dir / "ai_gpr_data_daily.csv",
+        "QQQ": raw_dir / "qqq_macro_close.csv",
+    }
+    out: dict[str, str | None] = {}
+    for name, path in paths.items():
+        if not path.exists():
+            out[name] = None
+            continue
+        series = _load_hyoas_series(path) if name == "BAMLH0A0HYM2" else None
+        if series is None:
+            raw = pd.read_csv(path)
+            date_col = raw.columns[0]
+            value_col = next(col for col in raw.columns if col != date_col)
+            series = pd.Series(
+                pd.to_numeric(raw[value_col], errors="coerce").to_numpy(),
+                index=pd.to_datetime(raw[date_col], errors="coerce"),
+            ).dropna()
+        out[name] = None if series.empty else series.index.min().strftime("%Y-%m-%d")
+    return out
+
+
 def main() -> None:
     replay_dir = ROOT / "outputs" / "replay" / "real"
     audit_dir = ROOT / "outputs" / "audit" / "state_stress_replay"
@@ -74,9 +106,25 @@ def main() -> None:
     freeze_replay_baseline(replay_dir=replay_dir, audit_dir=audit_dir, commit_hash=commit)
 
     replay = pd.read_csv(replay_dir / "weekly_replay.csv")
-    write_behavior_audits(replay, audit_dir)
-
     weekly_inputs = _load_weekly_inputs(weekly_inputs_path)
+    warmup_map = build_warmup_dependency_map(
+        weekly_inputs,
+        replay,
+        raw_first_dates=_raw_first_dates(cache_raw),
+    )
+    warmup_explanation = explain_warmup_boundary(
+        warmup_map,
+        window_name="2008_09_to_2009_06",
+        start="2008-09-01",
+        end="2009-06-30",
+    )
+    write_warmup_explanation(warmup_map, warmup_explanation, audit_dir)
+    write_behavior_audits(
+        replay,
+        audit_dir,
+        warmup_explanations={"2008_09_to_2009_06": warmup_explanation},
+    )
+
     hyoas_sources: dict[str, Path] = {
         "eco_archive_only": ROOT / "scratch" / "hyoas_csaladenes.csv",
         "eco_archive_plus_equibles": cache_raw / "fred_BAMLH0A0HYM2.csv",
@@ -107,7 +155,7 @@ def main() -> None:
 
     manifest_path = audit_dir / "audit_baseline_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    for path in sorted(audit_dir.glob("*.csv")) + sorted(audit_dir.glob("*.md")):
+    for path in sorted(audit_dir.glob("*.csv")) + sorted(audit_dir.glob("*.md")) + sorted(audit_dir.glob("*.json")):
         manifest["file_hashes"][str(path)] = sha256_file(path)
     for source_name, path in sensitivity_paths.items():
         manifest["file_hashes"][path] = sha256_file(path)

@@ -1,4 +1,4 @@
-window,start,end,rows_total,rows_finite_H_t,rows_finite_s_t,dominant_state_sequence,first_week_low_heat_states_become_material,first_week_s_t_breaks_into_upper_tail_regime,stress_upper_tail_threshold,drift_flag_rows,lag_weeks_between_state_migration_and_stress_breakout
-2008_09_to_2009_06,2008-09-01,2009-06-30,43,43,43,WARMUP,,2008-09-12,0.7639933404024748,0,
-2020_02_to_2020_06,2020-02-01,2020-06-30,21,21,21,S5 -> S3 -> S1 -> S2 -> S4 -> S3,2020-03-20,2020-02-28,0.7639933404024748,0,-3.0
-2021_10_to_2022_03,2021-10-01,2022-03-31,26,26,26,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,2021-10-01,2021-12-03,0.7639933404024748,0,9.0
+window,start,end,rows_total,rows_finite_H_t,rows_finite_s_t,dominant_state_sequence,first_week_low_heat_states_become_material,first_week_s_t_breaks_into_upper_tail_regime,stress_upper_tail_threshold,drift_flag_rows,lag_weeks_between_state_migration_and_stress_breakout,state_label_status,state_label_blocking_stage,state_label_earliest_valid_date,state_label_blocking_reason
+2008_09_to_2009_06,2008-09-01,2009-06-30,43,43,43,WARMUP,,2008-09-12,0.7639933404024748,0,,mathematically_blocked,covariance_warmup,2010-01-22,"The event window ends before state probabilities and semantic labels are unlocked. The binding chain is raw weekly inputs -> dual-memory state factors -> finite Theta(H,I) -> 260 finite-Theta covariance warmup -> prototype initialization/state assignment."
+2020_02_to_2020_06,2020-02-01,2020-06-30,21,21,21,S5 -> S3 -> S1 -> S2 -> S4 -> S3,2020-03-20,2020-02-28,0.7639933404024748,0,-3.0,valid,,,
+2021_10_to_2022_03,2021-10-01,2022-03-31,26,26,26,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,2021-10-01,2021-12-03,0.7639933404024748,0,9.0,valid,,,

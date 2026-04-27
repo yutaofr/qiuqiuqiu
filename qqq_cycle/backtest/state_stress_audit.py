@@ -33,6 +33,20 @@ EVENT_AUDIT_COLUMNS = [
     "stress_upper_tail_threshold",
     "drift_flag_rows",
     "lag_weeks_between_state_migration_and_stress_breakout",
+    "state_label_status",
+    "state_label_blocking_stage",
+    "state_label_earliest_valid_date",
+    "state_label_blocking_reason",
+]
+RAW_INPUT_COLUMNS = [
+    "DFII10",
+    "DGS2",
+    "BAMLH0A0HYM2",
+    "NFCI",
+    "VIXCLS",
+    "USEPUINDXD",
+    "AI_GPR",
+    "QQQ",
 ]
 
 
@@ -72,6 +86,246 @@ def _week_lag(first: str | None, second: str | None) -> int | None:
     return int(round((pd.Timestamp(second) - pd.Timestamp(first)).days / 7))
 
 
+def _date_or_none(value: pd.Timestamp | None) -> str | None:
+    if value is None or pd.isna(value):
+        return None
+    return pd.Timestamp(value).strftime("%Y-%m-%d")
+
+
+def _first_finite(series: pd.Series) -> str | None:
+    values = pd.to_numeric(series, errors="coerce")
+    finite = values[values.notna()]
+    if finite.empty:
+        return None
+    return _date_or_none(finite.index[0])
+
+
+def _first_matching_date(frame: pd.DataFrame, mask: pd.Series) -> str | None:
+    if frame.empty or not bool(mask.any()):
+        return None
+    return _date_or_none(pd.to_datetime(frame.loc[mask, "week_end"]).iloc[0])
+
+
+def _nth_finite_date(theta: pd.DataFrame, n: int) -> str | None:
+    finite = theta.dropna()
+    if len(finite) < n:
+        return None
+    return _date_or_none(finite.index[n - 1])
+
+
+def build_warmup_dependency_map(
+    weekly_inputs: pd.DataFrame,
+    replay: pd.DataFrame,
+    *,
+    raw_first_dates: Mapping[str, str | None] | None = None,
+) -> pd.DataFrame:
+    """Build a stage-by-stage state/stress warmup dependency map.
+
+    Inputs:
+        weekly_inputs: Weekly replay inputs indexed by week end, or containing a
+            `week_end` column.
+        replay: Generated weekly replay table.
+        raw_first_dates: Optional raw-source first dates from cache files.
+
+    Output:
+        A table with first raw, transformed, weekly, state-probability, and
+        stress usability dates for each required stage.
+
+    Time semantics:
+        This function diagnoses already generated weekly artifacts. It does not
+        impute values or alter state/stress outputs.
+    """
+
+    from qqq_cycle.core.drift_probe import DriftProbe
+    from qqq_cycle.core.state_layer import compute_state_layer
+    from qqq_cycle.core.stress_layer import compute_stress_layer
+
+    inputs = weekly_inputs.copy()
+    if "week_end" in inputs.columns:
+        inputs = inputs.set_index(pd.to_datetime(inputs["week_end"])).drop(columns=["week_end"])
+    else:
+        inputs.index = pd.to_datetime(inputs.index)
+    state = compute_state_layer(inputs)
+    theta = state[["H", "I"]]
+    stress = compute_stress_layer(theta, state["E"]).frame
+    drift = DriftProbe().compute(inputs)
+    replay_frame = replay.copy()
+    replay_frame["week_end"] = pd.to_datetime(replay_frame["week_end"])
+
+    raw_first_dates = raw_first_dates or {}
+    first_state_label = _first_matching_date(
+        replay_frame, replay_frame["state_label"].astype(str) != "WARMUP"
+    )
+    first_cov_warm = _first_matching_date(
+        replay_frame, replay_frame["is_warm"].fillna(False).astype(bool)
+    )
+    first_theta = _first_finite(theta["H"].where(theta["I"].notna()))
+    theta_260 = _nth_finite_date(theta, 260)
+    first_stress = _first_finite(stress["s"])
+
+    rows: list[dict[str, object]] = []
+
+    def add(
+        stage: str,
+        *,
+        first_available_raw_date: str | None = None,
+        first_finite_transformed_date: str | None = None,
+        first_finite_weekly_date: str | None = None,
+        first_date_usable_for_state_probability: str | None = None,
+        first_date_usable_for_stress: str | None = None,
+        blocking_reason: str | None = None,
+    ) -> None:
+        rows.append(
+            {
+                "stage": stage,
+                "first_available_raw_date": first_available_raw_date,
+                "first_finite_transformed_date": first_finite_transformed_date,
+                "first_finite_weekly_date": first_finite_weekly_date,
+                "first_date_usable_for_state_probability": first_date_usable_for_state_probability,
+                "first_date_usable_for_stress": first_date_usable_for_stress,
+                "blocking_reason": blocking_reason,
+            }
+        )
+
+    for column in RAW_INPUT_COLUMNS:
+        add(
+            column,
+            first_available_raw_date=raw_first_dates.get(column) or _first_finite(inputs[column]),
+            first_finite_weekly_date=_first_finite(inputs[column]),
+        )
+
+    transformed = {
+        "L_t": state["L"],
+        "T_t": state["T"],
+        "P_t": state["P"],
+        "E_t": state["E"],
+        "H_t": state["H"],
+        "I_t": state["I"],
+        "d_t": stress["d"],
+        "a_t": stress["a"],
+        "s_t": stress["s"],
+        "drift_probe_raw": drift["drift_probe_raw"],
+    }
+    for stage, series in transformed.items():
+        first = _first_finite(series)
+        add(
+            stage,
+            first_finite_transformed_date=first,
+            first_finite_weekly_date=first,
+            first_date_usable_for_state_probability=first_state_label
+            if stage in {"H_t", "I_t"}
+            else None,
+            first_date_usable_for_stress=first_stress if stage in {"H_t", "I_t", "E_t"} else first
+            if stage in {"d_t", "a_t", "s_t"}
+            else None,
+        )
+
+    add(
+        "covariance_warmup",
+        first_finite_transformed_date=first_theta,
+        first_date_usable_for_state_probability=first_cov_warm,
+        blocking_reason="requires 260 finite Theta(H,I) updates; NaN Theta rows do not advance warmup_count",
+    )
+    add(
+        "prototype_state_assignment_warmup",
+        first_finite_transformed_date=theta_260,
+        first_date_usable_for_state_probability=first_state_label,
+        blocking_reason=(
+            "requires initialized prototypes after the 260 finite-Theta covariance "
+            "warmup; current replay emits the first non-WARMUP label on the next finite week"
+        ),
+    )
+    add(
+        "state_label",
+        first_date_usable_for_state_probability=first_state_label,
+        blocking_reason="locked until covariance warmup and prototype initialization complete",
+    )
+    return pd.DataFrame(rows)
+
+
+def explain_warmup_boundary(
+    warmup_map: pd.DataFrame,
+    *,
+    window_name: str,
+    start: str,
+    end: str,
+) -> dict[str, object]:
+    """Explain whether an event window is blocked by state-label warmup."""
+
+    lookup = warmup_map.set_index("stage")
+    first_theta = lookup.at["covariance_warmup", "first_finite_transformed_date"]
+    covariance_usable = lookup.at[
+        "covariance_warmup", "first_date_usable_for_state_probability"
+    ]
+    state_label_usable = lookup.at["state_label", "first_date_usable_for_state_probability"]
+    window_end = pd.Timestamp(end)
+    blocked = state_label_usable is not None and window_end < pd.Timestamp(state_label_usable)
+    binding_stage = (
+        "covariance_warmup" if blocked and window_end < pd.Timestamp(covariance_usable) else None
+    )
+    if blocked and binding_stage is None:
+        binding_stage = "prototype_state_assignment_warmup"
+    reason = None
+    if blocked:
+        reason = (
+            "The event window ends before state probabilities and semantic labels "
+            "are unlocked. The binding chain is raw weekly inputs -> dual-memory "
+            "state factors -> finite Theta(H,I) -> 260 finite-Theta covariance "
+            "warmup -> prototype initialization/state assignment."
+        )
+    return {
+        "window": window_name,
+        "start": start,
+        "end": end,
+        "is_blocked": bool(blocked),
+        "binding_stage": binding_stage,
+        "first_finite_theta_date": first_theta,
+        "covariance_earliest_usable_date": covariance_usable,
+        "state_label_earliest_valid_date": state_label_usable,
+        "dependency_chain": [
+            "raw weekly inputs",
+            "dual-memory factors L_t/T_t/P_t",
+            "Theta(H_t,I_t)",
+            "260 finite-Theta covariance warmup",
+            "prototype initialization/state assignment",
+            "state_label",
+        ],
+        "blocking_reason": reason,
+    }
+
+
+def write_warmup_explanation(
+    warmup_map: pd.DataFrame,
+    explanation: Mapping[str, object],
+    output_dir: str | Path,
+) -> tuple[Path, Path, Path]:
+    """Write machine- and human-readable warmup boundary artifacts."""
+
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    map_path = out / "warmup_dependency_map.csv"
+    json_path = out / "warmup_explanation.json"
+    md_path = out / "warmup_explanation.md"
+    warmup_map.to_csv(map_path, index=False)
+    json_path.write_text(json.dumps(explanation, indent=2, sort_keys=True), encoding="utf-8")
+    lines = [
+        "# Warmup Explanation",
+        "",
+        f"- Window: {explanation['window']} ({explanation['start']} to {explanation['end']})",
+        f"- Blocked: {explanation['is_blocked']}",
+        f"- Binding stage: {explanation['binding_stage']}",
+        f"- First finite Theta date: {explanation['first_finite_theta_date']}",
+        f"- Covariance earliest usable date: {explanation['covariance_earliest_usable_date']}",
+        f"- State-label earliest valid date: {explanation['state_label_earliest_valid_date']}",
+        "",
+        "## Dependency Chain",
+    ]
+    lines.extend(f"- {item}" for item in explanation["dependency_chain"])
+    lines.extend(["", "## Blocking Reason", "", str(explanation["blocking_reason"])])
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return map_path, json_path, md_path
+
+
 def summarize_behavior_window(
     replay: pd.DataFrame,
     *,
@@ -79,6 +333,7 @@ def summarize_behavior_window(
     start: str,
     end: str,
     stress_upper_tail_threshold: float,
+    warmup_explanation: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Summarize state/stress behavior in one event window.
 
@@ -114,6 +369,15 @@ def summarize_behavior_window(
 
     first_low = _first_date(window, low_heat_mask)
     first_stress = _first_date(window, stress_mask)
+    state_label_status = "valid"
+    blocking_stage = None
+    earliest_valid = None
+    blocking_reason = None
+    if warmup_explanation is not None and bool(warmup_explanation.get("is_blocked")):
+        state_label_status = "mathematically_blocked"
+        blocking_stage = warmup_explanation.get("binding_stage")
+        earliest_valid = warmup_explanation.get("state_label_earliest_valid_date")
+        blocking_reason = warmup_explanation.get("blocking_reason")
     return {
         "window": window_name,
         "start": start,
@@ -129,6 +393,10 @@ def summarize_behavior_window(
         "lag_weeks_between_state_migration_and_stress_breakout": _week_lag(
             first_low, first_stress
         ),
+        "state_label_status": state_label_status,
+        "state_label_blocking_stage": blocking_stage,
+        "state_label_earliest_valid_date": earliest_valid,
+        "state_label_blocking_reason": blocking_reason,
     }
 
 
@@ -136,6 +404,7 @@ def write_behavior_audits(
     replay: pd.DataFrame,
     output_dir: str | Path,
     windows: Mapping[str, tuple[str, str]] = EVENT_WINDOWS,
+    warmup_explanations: Mapping[str, Mapping[str, object]] | None = None,
 ) -> dict[str, Path]:
     """Write one behavior audit CSV per event window plus a combined table."""
 
@@ -151,6 +420,7 @@ def write_behavior_audits(
             start=start,
             end=end,
             stress_upper_tail_threshold=threshold,
+            warmup_explanation=(warmup_explanations or {}).get(name),
         )
         rows.append(row)
         frame = pd.DataFrame([row], columns=EVENT_AUDIT_COLUMNS)

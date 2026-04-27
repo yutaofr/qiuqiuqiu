@@ -1,0 +1,19 @@
+{
+  "binding_stage": "covariance_warmup",
+  "blocking_reason": "The event window ends before state probabilities and semantic labels are unlocked. The binding chain is raw weekly inputs -> dual-memory state factors -> finite Theta(H,I) -> 260 finite-Theta covariance warmup -> prototype initialization/state assignment.",
+  "covariance_earliest_usable_date": "2010-01-15",
+  "dependency_chain": [
+    "raw weekly inputs",
+    "dual-memory factors L_t/T_t/P_t",
+    "Theta(H_t,I_t)",
+    "260 finite-Theta covariance warmup",
+    "prototype initialization/state assignment",
+    "state_label"
+  ],
+  "end": "2009-06-30",
+  "first_finite_theta_date": "2005-01-28",
+  "is_blocked": true,
+  "start": "2008-09-01",
+  "state_label_earliest_valid_date": "2010-01-22",
+  "window": "2008_09_to_2009_06"
+}
