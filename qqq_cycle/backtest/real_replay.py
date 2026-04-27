@@ -10,6 +10,7 @@ from typing import Iterable
 from urllib.parse import urljoin, urlencode
 from urllib.request import urlopen
 
+import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
@@ -64,7 +65,8 @@ class RealReplayConfig:
     qqq_price_csv: Path | None = None
     # CSV override for BAMLH0A0HYM2 when FRED API returns truncated ICE BofA history
     # (~3 years from April 2023). Must have a date column and one numeric value column;
-    # column names are detected flexibly. Recommended span ≥10 years (≥525 daily rows).
+    # column names are detected flexibly. Recommended span >=10 years (>=525 daily rows).
+    # When None and FRED history is insufficient, an auto-splice is built from BAA10Y.
     hyoas_csv: Path | None = None
     ai_gpr_url: str = AI_GPR_OFFICIAL_PAGE
 
@@ -198,6 +200,77 @@ def _load_hyoas_csv(path: Path, start: str, end: str) -> pd.Series:
     return series.sort_index()
 
 
+def _build_hyoas_splice(
+    fred_key: str,
+    start: str,
+    end: str,
+    series_map: dict[str, pd.Series],
+    raw_dir: Path,
+) -> tuple[pd.Series, str]:
+    """Regression-splice for BAMLH0A0HYM2 when FRED API history is truncated.
+
+    Calibrates OLS(BAA10Y, log(VIX), NFCI) on the available BAMLH0A0HYM2 overlap,
+    predicts the pre-overlap period at daily frequency, then concatenates with the
+    actual FRED observations. BAA10Y is a Fed series with free full history to 1962.
+    """
+    baa10y = fetch_fred_series("BAA10Y", fred_key, start, end)
+    baa10y.to_csv(raw_dir / "fred_BAA10Y.csv", index_label="date")
+
+    hyoas_actual = series_map.get("BAMLH0A0HYM2", pd.Series([], dtype=float, name="BAMLH0A0HYM2"))
+    vix = series_map.get("VIXCLS")
+    nfci = series_map.get("NFCI")
+
+    def w(s: pd.Series) -> pd.Series:
+        return s.sort_index().resample("W-FRI").last()
+
+    pieces: dict[str, pd.Series] = {"baa": w(baa10y)}
+    if vix is not None:
+        pieces["lvix"] = np.log(w(vix).clip(lower=1.0))
+    if nfci is not None:
+        pieces["nfci"] = w(nfci)
+
+    overlap = pd.concat({**pieces, "hy": w(hyoas_actual)}, axis=1, sort=True).dropna()
+    # With fewer than 2*(n_predictors+1) overlap rows the multivariate fit is unstable;
+    # fall back to BAA10Y-only regression which needs only 2 rows.
+    pred_cols = list(pieces.keys())
+    n_params = len(pred_cols) + 1
+    if len(overlap) < 2 * n_params:
+        pred_cols = ["baa"]
+    X = np.column_stack([overlap[c].to_numpy(dtype=float) for c in pred_cols] + [np.ones(len(overlap))])
+    y = overlap["hy"].to_numpy(dtype=float)
+    coef, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
+    pred_in_sample = X @ coef
+    ss_res = float(np.sum((y - pred_in_sample) ** 2))
+    ss_tot = float(np.sum((y - y.mean()) ** 2))
+    r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+
+    daily_pieces: dict[str, pd.Series] = {"baa": baa10y}
+    if vix is not None:
+        daily_pieces["lvix"] = np.log(vix.clip(lower=1.0))
+    if nfci is not None:
+        daily_pieces["nfci"] = nfci
+
+    full = pd.concat(daily_pieces, axis=1, sort=True).dropna()
+    X_full = np.column_stack([full[c].to_numpy(dtype=float) for c in pred_cols] + [np.ones(len(full))])
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        raw_pred = X_full @ coef
+    # Guard against overflow/NaN from an unstable regression; cap to a plausible OAS range.
+    raw_pred = np.where(np.isfinite(raw_pred), raw_pred, np.nan)
+    raw_pred = np.clip(raw_pred, 0.5, 50.0)
+    predicted = pd.Series(raw_pred.astype(float), index=full.index, name="BAMLH0A0HYM2")
+
+    if not hyoas_actual.empty:
+        cutoff = hyoas_actual.index.min()
+        pre = predicted[predicted.index < cutoff]
+        splice = pd.concat([pre, hyoas_actual]).sort_index()
+    else:
+        splice = predicted
+
+    extra = "," + ",".join(p for p in pred_cols if p != "baa") if len(pred_cols) > 1 else ""
+    method = f"OLS(BAA10Y{extra}) R²={r2:.3f} on {len(overlap)}w overlap"
+    return splice, method
+
+
 def _weekly(series: pd.Series) -> pd.Series:
     return series.sort_index().resample("W-FRI").last()
 
@@ -237,6 +310,7 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     qqq_price_basis: str | None = None
     qqq_source_names: tuple[str, ...] = ()
     hyoas_source: str = "fred_api"
+    hyoas_splice_method: str | None = None
 
     fred_key = os.getenv("FRED_API_KEY", "")
     if config.fetch_fred and fred_key:
@@ -253,6 +327,7 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         if not fred_key:
             source_errors["FRED_API_KEY"] = "missing from .env"
 
+    # Explicit CSV override: wins over any FRED result when provided and loads successfully.
     if config.hyoas_csv is not None:
         try:
             hyoas = _load_hyoas_csv(config.hyoas_csv, config.start, config.end)
@@ -263,6 +338,23 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
             source_errors.pop("BAMLH0A0HYM2", None)
         except Exception as exc:  # noqa: BLE001 - CSV load failure is non-fatal
             source_errors["BAMLH0A0HYM2_csv_override"] = str(exc)
+
+    # Auto-splice: if BAMLH0A0HYM2 is still insufficient (FRED API licensing truncation)
+    # and no explicit CSV was provided, build a regression splice from BAA10Y + VIX + NFCI.
+    _hyoas_rows = series_map.get("BAMLH0A0HYM2", pd.Series([], dtype=float)).dropna().shape[0]
+    if hyoas_source == "fred_api" and _hyoas_rows < MIN_WARMUP_ROWS and fred_key:
+        try:
+            splice, method = _build_hyoas_splice(
+                fred_key, config.start, config.end, series_map, dirs["raw"]
+            )
+            splice.to_csv(dirs["raw"] / "hyoas_baa10y_splice.csv", index_label="date")
+            series_map["BAMLH0A0HYM2"] = splice
+            hyoas_source = "baa10y_splice"
+            hyoas_splice_method = method
+            missing_sources = [s for s in missing_sources if s != "BAMLH0A0HYM2"]
+            source_errors.pop("BAMLH0A0HYM2", None)
+        except Exception as exc:  # noqa: BLE001 - splice failure falls through to degraded
+            source_errors["BAMLH0A0HYM2_splice"] = str(exc)
 
     if config.fetch_ai_gpr:
         try:
@@ -347,6 +439,7 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         "price_basis": qqq_price_basis,
         "qqq_source_names": list(qqq_source_names),
         "hyoas_source": hyoas_source,
+        "hyoas_splice_method": hyoas_splice_method,
         "series_coverage": series_coverage,
         "insufficient_series": insufficient_series,
         "cache_layout": {

@@ -354,3 +354,62 @@ def test_real_replay_falls_back_to_fred_when_hyoas_csv_load_fails(
     assert result.mode == "degraded"
     assert result.weekly_replay_path is None
     assert "BAMLH0A0HYM2_csv_override" in manifest["source_errors"]
+
+
+def test_real_replay_auto_splice_when_fred_hyoas_is_insufficient(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx_long = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx_long))
+
+    # All FRED series — BAMLH0A0HYM2 returns only 100 daily rows (< MIN_WARMUP_ROWS=525)
+    idx_short = pd.date_range("2023-05-01", periods=100, freq="D")
+    full_series: dict[str, pd.Series] = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx_long),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx_long),
+        "BAMLH0A0HYM2": pd.Series(4.0 + 0.1 * np.arange(100), index=idx_short),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx_long),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx_long),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx_long),
+        # BAA10Y fetched internally by the splice builder
+        "BAA10Y": pd.Series(1.5 + 0.3 * np.sin(trend * 11), index=idx_long),
+    }
+    ai_gpr = pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx_long)
+
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    qqq = 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16)))
+    pd.DataFrame(
+        {
+            "trade_date": idx_long,
+            "ticker": "QQQ",
+            "close": qqq,
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_backward_adjusted",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    def fake_fetch(series_id: str, api_key: str, start: str, end: str) -> pd.Series:
+        del api_key, start, end
+        return full_series[series_id]
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay.fetch_fred_series", fake_fetch)
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay._load_ai_gpr", lambda *_: ai_gpr)
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert manifest["hyoas_source"] == "baa10y_splice"
+    assert manifest["hyoas_splice_method"] is not None
+    assert "OLS(BAA10Y" in manifest["hyoas_splice_method"]
+    assert "BAMLH0A0HYM2" in manifest["active_sources"]
+    # The splice should produce enough history to pass the warmup gate
+    assert result.mode == "state_stress_only"
+    assert result.weekly_replay_path is not None

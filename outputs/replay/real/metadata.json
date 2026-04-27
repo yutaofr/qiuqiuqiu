@@ -3,16 +3,12 @@
     "DFII10",
     "DGS2",
     "BAMLH0A0HYM2",
-    "NFCI",
-    "VIXCLS",
-    "USEPUINDXD",
-    "AI_GPR",
-    "QQQ"
+    "AI_GPR"
   ],
   "cache_layout": {
-    "manifests": "cache/real_replay/manifests",
-    "raw": "cache/real_replay/raw",
-    "staging": "cache/real_replay/staging"
+    "manifests": "/app/cache/real_replay/manifests",
+    "raw": "/app/cache/real_replay/raw",
+    "staging": "/app/cache/real_replay/staging"
   },
   "data_integrity": {
     "complete_state_inputs": false,
@@ -27,24 +23,56 @@
       "QQQ"
     ],
     "source_errors": {
-      "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
+      "NFCI": "HTTP Error 500: Internal Server Error",
+      "QQQ": "no macro market price source configured",
+      "USEPUINDXD": "HTTP Error 500: Internal Server Error",
+      "VIXCLS": "HTTP Error 500: Internal Server Error"
     },
     "weekly_rows_staged": 1357
   },
+  "hyoas_manifest": null,
+  "hyoas_source": "fred_api",
+  "insufficient_series": [],
   "micro_scope": "disabled_no_pit_micro_contract",
   "missing_sources": [
-    "REPLAY_WARMUP"
+    "NFCI",
+    "QQQ",
+    "USEPUINDXD",
+    "VIXCLS"
   ],
   "mode": "degraded",
-  "outputs": "outputs/replay/real",
-  "price_basis": "vendor_raw_close",
-  "qqq_source_names": [
-    "yahoo_chart"
-  ],
+  "outputs": "/app/outputs/replay/real",
+  "price_basis": null,
+  "qqq_source_names": [],
   "replay_scope": "state_stress_only",
   "risk_scope": "disabled_no_production_rho_t",
+  "series_coverage": {
+    "AI_GPR": {
+      "max_date": "2025-12-31",
+      "min_date": "2000-01-01",
+      "rows": 9497
+    },
+    "BAMLH0A0HYM2": {
+      "max_date": "2025-12-31",
+      "min_date": "2023-04-25",
+      "rows": 705
+    },
+    "DFII10": {
+      "max_date": "2025-12-31",
+      "min_date": "2003-01-02",
+      "rows": 5753
+    },
+    "DGS2": {
+      "max_date": "2025-12-31",
+      "min_date": "2000-01-03",
+      "rows": 6502
+    }
+  },
   "source_errors": {
-    "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
+    "NFCI": "HTTP Error 500: Internal Server Error",
+    "QQQ": "no macro market price source configured",
+    "USEPUINDXD": "HTTP Error 500: Internal Server Error",
+    "VIXCLS": "HTTP Error 500: Internal Server Error"
   },
   "weekly_rows_staged": 1357
 }

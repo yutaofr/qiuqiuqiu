@@ -1,8 +1,14 @@
 {
   "missing_sources": [
-    "REPLAY_WARMUP"
+    "NFCI",
+    "QQQ",
+    "USEPUINDXD",
+    "VIXCLS"
   ],
   "source_errors": {
-    "REPLAY_WARMUP": "need at least 265 finite theta rows for replay"
+    "NFCI": "HTTP Error 500: Internal Server Error",
+    "QQQ": "no macro market price source configured",
+    "USEPUINDXD": "HTTP Error 500: Internal Server Error",
+    "VIXCLS": "HTTP Error 500: Internal Server Error"
   }
 }
