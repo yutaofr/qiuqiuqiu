@@ -1,0 +1,2 @@
+window,start,end,rows_total,rows_finite_H_t,rows_finite_s_t,dominant_state_sequence,first_week_low_heat_states_become_material,first_week_s_t_breaks_into_upper_tail_regime,stress_upper_tail_threshold,drift_flag_rows,lag_weeks_between_state_migration_and_stress_breakout
+2008_09_to_2009_06,2008-09-01,2009-06-30,43,43,43,WARMUP,,2008-09-12,0.7639933404024748,0,

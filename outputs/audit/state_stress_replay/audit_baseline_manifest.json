@@ -1,0 +1,34 @@
+{
+  "audit_grade": "conditional",
+  "commit_hash": "67d33f21740a4a39e82accf9fef73910235bb463",
+  "file_hashes": {
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/behavior_audit_2008_09_to_2009_06.csv": "2a3a584f7b4f34d3dab881ff81ab1dd9bc88e18d1c1db9cee204f7fbc23a82bc",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/behavior_audit_2020_02_to_2020_06.csv": "1439770af29d206e8a916dbc57200336fe9cb0ebfdd3f38603abf8209461f33c",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/behavior_audit_2021_10_to_2022_03.csv": "31bdaf75416aab8268b8c2cf08346a81545e1b2f56a65720d4fefcdda5047405",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/behavior_audit_summary.csv": "2c31241c854c0f1005884bf4d86ba60cde6a2b42d2c4949d8b7799c763c13664",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/bottom_20_huber_weight.csv": "822c85372d8810424fbc3dcbacd7f4685b6933fa77d71f70e454f2136c39e410",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/drift_flags.csv": "50a3efe333f8eea492c61dd289a5bf2ab44cec3ad0a37e727766f9786ea55c2b",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/event_2008_09_to_2009_06.csv": "d2200da6803bf3f34f3da970992119abc33ba69b314568e0b20afa40443bd89c",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/event_2020_02_to_2020_06.csv": "00738bde8bd6c8b90d623dbcca4c41636bd2843842de3c9c25484a0d6e6b1cc8",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/event_2021_10_to_2022_03.csv": "0dd190a4c3b384830890c2b2e69e7eecce1e65a89ada4d6e6e4aeb3547544899",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/hyoas_archive_manifest.json": "9cdb1e30aef36dfc2781edd2ced4a48d73da7671f6b244ccd46a8e47e7d45edd",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/numerical_health_summary.json": "ef9faaa8d05beb976784a09dfb1c47b487797141a3f0de3f1aa17bb023d83afe",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/numerical_health_summary.md": "d689833f20311d5e9d43a2a2898fa257358b686c3c7928e8b7db3bcd562b2bb4",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_baa10y_splice_experimental.csv": "9b566a89a26c270555e8bd6b4c42298ae10b1458ffc58bd5a23d181e51482ad5",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_eco_archive_only.csv": "31d8f41c523d33b580342757d16cb73c3fe339685e519287de92da0b0f7ec64a",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_eco_archive_plus_equibles.csv": "705258eb5a8bc33f1e9f57109e192c62e2a2e7e6d9cfd5db03f0d989f277c79f",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_sensitivity_summary.csv": "e02c6c5d9c80f79301b77170e910d727647e310fb09251857e68f47bec155ab8",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_sensitivity_summary.md": "b19d6bb9ad2f7cee9e427658ae7b49a6734949451fb9945669584e442c1c73cc",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/top_20_condition_number_reg.csv": "1d65a3c6d84245200598caafdefde3e0a2029cbabcd72532832c7786880947e5",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/warmup_boundary_pm10.csv": "4a9db1e8cf11f0e93a4629b497b9aac2d12e101f0ef6204be8a6a3c79e53ba5b",
+    "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/weekly_replay.csv": "705258eb5a8bc33f1e9f57109e192c62e2a2e7e6d9cfd5db03f0d989f277c79f"
+  },
+  "hyoas_source": "csv_override",
+  "production_eligible": false,
+  "replay_scope": "state_stress_only",
+  "source_sensitivity_replays": {
+    "baa10y_splice_experimental": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_baa10y_splice_experimental.csv",
+    "eco_archive_only": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_eco_archive_only.csv",
+    "eco_archive_plus_equibles": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/audit/state_stress_replay/source_replays/weekly_replay_eco_archive_plus_equibles.csv"
+  }
+}

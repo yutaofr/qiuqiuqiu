@@ -1,0 +1,2 @@
+window,start,end,rows_total,rows_finite_H_t,rows_finite_s_t,dominant_state_sequence,first_week_low_heat_states_become_material,first_week_s_t_breaks_into_upper_tail_regime,stress_upper_tail_threshold,drift_flag_rows,lag_weeks_between_state_migration_and_stress_breakout
+2020_02_to_2020_06,2020-02-01,2020-06-30,21,21,21,S5 -> S3 -> S1 -> S2 -> S4 -> S3,2020-03-20,2020-02-28,0.7639933404024748,0,-3

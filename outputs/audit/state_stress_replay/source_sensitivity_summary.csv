@@ -1,0 +1,10 @@
+source,reference_source,window,rows_total,rows_finite_H_t,rows_finite_s_t,H_t_mean_abs_diff_vs_reference,s_t_mean_abs_diff_vs_reference,drift_flag_mismatch_rows_vs_reference,window_state_sequence,reference_window_state_sequence,window_state_sequence_matches_reference
+eco_archive_only,eco_archive_plus_equibles,2008_09_to_2009_06,43,43,43,0.0,0.0,0,WARMUP,WARMUP,True
+eco_archive_only,eco_archive_plus_equibles,2020_02_to_2020_06,21,21,21,0.0,0.0,0,S5 -> S3 -> S1 -> S2 -> S4 -> S3,S5 -> S3 -> S1 -> S2 -> S4 -> S3,True
+eco_archive_only,eco_archive_plus_equibles,2021_10_to_2022_03,26,0,0,,,0,WARMUP,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,False
+eco_archive_plus_equibles,eco_archive_plus_equibles,2008_09_to_2009_06,43,43,43,0.0,0.0,0,WARMUP,WARMUP,True
+eco_archive_plus_equibles,eco_archive_plus_equibles,2020_02_to_2020_06,21,21,21,0.0,0.0,0,S5 -> S3 -> S1 -> S2 -> S4 -> S3,S5 -> S3 -> S1 -> S2 -> S4 -> S3,True
+eco_archive_plus_equibles,eco_archive_plus_equibles,2021_10_to_2022_03,26,26,26,0.0,0.0,0,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,True
+baa10y_splice_experimental,eco_archive_plus_equibles,2008_09_to_2009_06,43,43,43,0.04638977839055621,0.028504038617100273,0,WARMUP,WARMUP,True
+baa10y_splice_experimental,eco_archive_plus_equibles,2020_02_to_2020_06,21,21,21,0.1596406273295091,0.026908471868816883,0,S4 -> S5 -> S3 -> S1 -> S2 -> S4,S5 -> S3 -> S1 -> S2 -> S4 -> S3,False
+baa10y_splice_experimental,eco_archive_plus_equibles,2021_10_to_2022_03,26,26,26,0.04054666710926899,0.007679871602236066,0,S3 -> S5 -> S4 -> S5 -> S3 -> S4 -> S3 -> S1 -> S2,S1 -> S3 -> S5 -> S4 -> S5 -> S1 -> S5 -> S1 -> S5 -> S4 -> S3 -> S1 -> S2,False
