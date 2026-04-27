@@ -1,0 +1,10 @@
+{
+  "strict_fixture_passed": true,
+  "degraded_real_passed": true,
+  "strict_blockers": [],
+  "degraded_reasons": [
+    "no contracts provided: h_t/rho_t unavailable"
+  ],
+  "first_valid_state_date": "2010-01-22",
+  "first_valid_stress_date": "2010-01-22"
+}
