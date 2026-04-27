@@ -210,3 +210,147 @@ def test_real_replay_degrades_gracefully_when_replay_warmup_is_insufficient(
     assert result.weekly_replay_path is None
     assert "REPLAY_WARMUP" in manifest["missing_sources"]
     assert "need at least 265 finite theta rows" in manifest["source_errors"]["REPLAY_WARMUP"]
+
+
+def test_real_replay_uses_hyoas_csv_override_for_state_stress_only_outputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    # All FRED series except BAMLH0A0HYM2 — simulates FRED API truncation for ICE BofA series
+    series_map = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    ai_gpr = pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx)
+
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    qqq = 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16)))
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": qqq,
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_backward_adjusted",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    hyoas_csv = tmp_path / "hyoas_long_history.csv"
+    hyoas_vals = pd.Series(4.0 + 0.4 * np.cos(trend * 14), index=idx)
+    pd.DataFrame({"date": idx, "BAMLH0A0HYM2": hyoas_vals.to_numpy()}).to_csv(
+        hyoas_csv, index=False
+    )
+
+    def fake_fetch(series_id: str, api_key: str, start: str, end: str) -> pd.Series:
+        del api_key, start, end
+        if series_id not in series_map:
+            raise ValueError(f"FRED API truncated: {series_id}")
+        return series_map[series_id]
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay.fetch_fred_series", fake_fetch)
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay._load_ai_gpr", lambda *_: ai_gpr)
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+            hyoas_csv=hyoas_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert result.mode == "state_stress_only"
+    assert result.weekly_replay_path is not None
+    assert manifest["hyoas_source"] == "csv_override"
+    assert manifest["missing_sources"] == []
+    assert "BAMLH0A0HYM2" in manifest["series_coverage"]
+    cov = manifest["series_coverage"]["BAMLH0A0HYM2"]
+    assert cov["rows"] > 0
+    assert "min_date" in cov and "max_date" in cov
+
+
+def test_real_replay_manifest_contains_series_coverage_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    idx = pd.date_range("2000-01-07", "2025-12-26", freq="W-FRI")
+    trend = np.linspace(0.0, 1.0, len(idx))
+    full_series = {
+        "DFII10": pd.Series(0.4 + 0.2 * np.sin(trend * 20), index=idx),
+        "DGS2": pd.Series(2.0 + 0.5 * np.sin(trend * 12), index=idx),
+        "BAMLH0A0HYM2": pd.Series(4.0 + 0.4 * np.cos(trend * 14), index=idx),
+        "NFCI": pd.Series(-0.25 + 0.2 * np.sin(trend * 17), index=idx),
+        "VIXCLS": pd.Series(18.0 + 4.0 * np.sin(trend * 19), index=idx),
+        "USEPUINDXD": pd.Series(90.0 + 20.0 * np.cos(trend * 15), index=idx),
+    }
+    ai_gpr = pd.Series(50.0 + 15.0 * np.sin(trend * 18), index=idx)
+
+    qqq_csv = tmp_path / "qqq_macro.csv"
+    qqq = 100.0 * np.exp(np.cumsum(0.002 + 0.01 * np.sin(trend * 16)))
+    pd.DataFrame(
+        {
+            "trade_date": idx,
+            "ticker": "QQQ",
+            "close": qqq,
+            "source_name": "diagnostic_vendor",
+            "fetch_timestamp": "2026-04-27 00:00",
+            "price_basis": "vendor_backward_adjusted",
+        }
+    ).to_csv(qqq_csv, index=False)
+
+    hyoas_csv = tmp_path / "hyoas_long_history.csv"
+    pd.DataFrame(
+        {"date": idx, "BAMLH0A0HYM2": full_series["BAMLH0A0HYM2"].to_numpy()}
+    ).to_csv(hyoas_csv, index=False)
+
+    monkeypatch.setenv("FRED_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "qqq_cycle.backtest.real_replay.fetch_fred_series",
+        lambda sid, *_: full_series[sid],
+    )
+    monkeypatch.setattr("qqq_cycle.backtest.real_replay._load_ai_gpr", lambda *_: ai_gpr)
+
+    result = run_real_replay(
+        RealReplayConfig(
+            cache_root=tmp_path / "cache",
+            output_dir=tmp_path / "outputs",
+            qqq_price_csv=qqq_csv,
+            hyoas_csv=hyoas_csv,
+        )
+    )
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert "series_coverage" in manifest
+    for name in ("DFII10", "DGS2", "BAMLH0A0HYM2", "NFCI", "VIXCLS", "USEPUINDXD"):
+        assert name in manifest["series_coverage"], f"{name} missing from series_coverage"
+        cov = manifest["series_coverage"][name]
+        assert {"rows", "min_date", "max_date"} <= cov.keys()
+        assert cov["rows"] > 0
+    assert "insufficient_series" in manifest
+    assert isinstance(manifest["insufficient_series"], list)
+
+
+def test_real_replay_falls_back_to_fred_when_hyoas_csv_load_fails(
+    tmp_path: Path,
+) -> None:
+    config = RealReplayConfig(
+        cache_root=tmp_path / "cache",
+        output_dir=tmp_path / "outputs",
+        fetch_fred=False,
+        fetch_ai_gpr=False,
+        qqq_price_csv=None,
+        hyoas_csv=tmp_path / "nonexistent_hyoas.csv",
+    )
+
+    result = run_real_replay(config)
+
+    manifest = json.loads(result.manifest_path.read_text())
+    assert result.mode == "degraded"
+    assert result.weekly_replay_path is None
+    assert "BAMLH0A0HYM2_csv_override" in manifest["source_errors"]

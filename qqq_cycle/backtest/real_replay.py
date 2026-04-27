@@ -34,6 +34,9 @@ DEFAULT_FRED_SERIES = (
     "USEPUINDXD",
 )
 
+# 265 theta minimum + 260 dual-memory warmup buffer; advisory threshold for _insufficient()
+MIN_WARMUP_ROWS = 525
+
 AI_GPR_OFFICIAL_PAGE = "https://www.matteoiacoviello.com/ai_gpr.html"
 REQUIRED_STATE_COLUMNS = [
     "DFII10",
@@ -59,6 +62,10 @@ class RealReplayConfig:
     fetch_fred: bool = True
     fetch_ai_gpr: bool = True
     qqq_price_csv: Path | None = None
+    # CSV override for BAMLH0A0HYM2 when FRED API returns truncated ICE BofA history
+    # (~3 years from April 2023). Must have a date column and one numeric value column;
+    # column names are detected flexibly. Recommended span ≥10 years (≥525 daily rows).
+    hyoas_csv: Path | None = None
     ai_gpr_url: str = AI_GPR_OFFICIAL_PAGE
 
 
@@ -159,6 +166,38 @@ def _load_qqq_macro_csv(
     )
 
 
+def _load_hyoas_csv(path: Path, start: str, end: str) -> pd.Series:
+    """Load a long-history BAMLH0A0HYM2 CSV when FRED API history is truncated."""
+    raw = pd.read_csv(path)
+    lower = [c.lower().strip() for c in raw.columns]
+    date_col = next(
+        (raw.columns[i] for i, n in enumerate(lower) if n in {"date", "day", "week_end", "index"}),
+        raw.columns[0],
+    )
+    value_col = next(
+        (
+            raw.columns[i]
+            for i, n in enumerate(lower)
+            if raw.columns[i] != date_col
+            and n in {"bamlh0a0hym2", "hyoas", "hy_oas", "hy_spread", "value"}
+        ),
+        next((c for c in raw.columns if c != date_col), None),
+    )
+    if value_col is None:
+        raise ValueError("HYOAS CSV has no usable value column")
+    series = pd.Series(
+        pd.to_numeric(raw[value_col], errors="coerce").to_numpy(),
+        index=pd.to_datetime(raw[date_col]),
+        name="BAMLH0A0HYM2",
+    ).dropna()
+    series = series.loc[
+        (series.index >= pd.Timestamp(start)) & (series.index <= pd.Timestamp(end))
+    ]
+    if series.empty:
+        raise ValueError(f"HYOAS CSV has no rows in [{start}, {end}]")
+    return series.sort_index()
+
+
 def _weekly(series: pd.Series) -> pd.Series:
     return series.sort_index().resample("W-FRI").last()
 
@@ -173,6 +212,19 @@ def _missing(required: Iterable[str], series_map: dict[str, pd.Series]) -> list[
     return [name for name in required if name not in series_map or series_map[name].dropna().empty]
 
 
+def _insufficient(
+    required: Iterable[str],
+    series_map: dict[str, pd.Series],
+    min_rows: int = MIN_WARMUP_ROWS,
+) -> list[str]:
+    """Advisory: series present but below min_rows non-NaN daily rows."""
+    return [
+        name
+        for name in required
+        if name in series_map and 0 < series_map[name].dropna().shape[0] < min_rows
+    ]
+
+
 def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     """Run official-source replay when possible, otherwise degrade explicitly."""
 
@@ -184,6 +236,7 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
     series_map: dict[str, pd.Series] = {}
     qqq_price_basis: str | None = None
     qqq_source_names: tuple[str, ...] = ()
+    hyoas_source: str = "fred_api"
 
     fred_key = os.getenv("FRED_API_KEY", "")
     if config.fetch_fred and fred_key:
@@ -199,6 +252,17 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         missing_sources.extend(config.fred_series)
         if not fred_key:
             source_errors["FRED_API_KEY"] = "missing from .env"
+
+    if config.hyoas_csv is not None:
+        try:
+            hyoas = _load_hyoas_csv(config.hyoas_csv, config.start, config.end)
+            hyoas.to_csv(dirs["raw"] / "fred_BAMLH0A0HYM2.csv", index_label="date")
+            series_map["BAMLH0A0HYM2"] = hyoas
+            hyoas_source = "csv_override"
+            missing_sources = [s for s in missing_sources if s != "BAMLH0A0HYM2"]
+            source_errors.pop("BAMLH0A0HYM2", None)
+        except Exception as exc:  # noqa: BLE001 - CSV load failure is non-fatal
+            source_errors["BAMLH0A0HYM2_csv_override"] = str(exc)
 
     if config.fetch_ai_gpr:
         try:
@@ -256,6 +320,17 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
             {"missing_sources": missing_sources, "source_errors": source_errors},
         )
 
+    series_coverage = {
+        name: {
+            "rows": int(series_map[name].dropna().shape[0]),
+            "min_date": series_map[name].dropna().index.min().strftime("%Y-%m-%d"),
+            "max_date": series_map[name].dropna().index.max().strftime("%Y-%m-%d"),
+        }
+        for name in REQUIRED_STATE_COLUMNS
+        if name in series_map and not series_map[name].dropna().empty
+    }
+    insufficient_series = _insufficient(REQUIRED_STATE_COLUMNS, series_map)
+
     manifest = {
         "mode": mode,
         "replay_scope": ALLOWED_REPLAY_SCOPE,
@@ -271,6 +346,9 @@ def run_real_replay(config: RealReplayConfig) -> RealReplayResult:
         "risk_scope": "disabled_no_production_rho_t",
         "price_basis": qqq_price_basis,
         "qqq_source_names": list(qqq_source_names),
+        "hyoas_source": hyoas_source,
+        "series_coverage": series_coverage,
+        "insufficient_series": insufficient_series,
         "cache_layout": {
             "raw": str(dirs["raw"]),
             "staging": str(dirs["staging"]),
