@@ -17,6 +17,9 @@ dependencies = [
 [tool.setuptools.packages.find]
 include = ["qqq_cycle*"]
 
+[tool.setuptools.package-data]
+qqq_cycle = ["config/model_v22.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]

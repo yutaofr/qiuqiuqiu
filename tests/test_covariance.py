@@ -1,6 +1,6 @@
 import numpy as np
 
-from qqq_cycle.core.covariance import RobustEWCov2D, regularize_cov_2d
+from qqq_cycle.core.covariance import COND_WARN_RATIO, RobustEWCov2D, regularize_cov_2d
 
 
 def test_cold_start_invertible() -> None:
@@ -85,3 +85,17 @@ def test_regularize_cov_2d_returns_three_values_unless_diagnostics_requested() -
     assert len(plain) == 3
     assert len(with_diagnostics) == 4
     assert isinstance(with_diagnostics[3], dict)
+
+
+def test_condition_threshold_reachable() -> None:
+    eps_rel = 1e-4
+    cov_raw = np.array([[1.0, 0.0], [0.0, 1e-12]])
+
+    _, _, _, diagnostics = regularize_cov_2d(
+        cov_raw,
+        eps_abs=1e-12,
+        eps_rel=eps_rel,
+        return_diagnostics=True,
+    )
+
+    assert diagnostics["condition_number_reg"] > COND_WARN_RATIO / eps_rel

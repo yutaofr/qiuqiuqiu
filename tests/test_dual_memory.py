@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+from qqq_cycle.core.covariance import RobustEWCov2D
 from qqq_cycle.core.dual_memory import (
     DualMemoryNormalizer,
     dual_memory,
@@ -72,3 +73,16 @@ def test_incremental_transform_matches_batch_next_point() -> None:
     batch = normalizer.fit_transform(pd.concat([history, pd.Series([x_new])])).iloc[-1]
 
     assert np.isclose(incremental, batch, rtol=1e-12, atol=1e-12)
+
+
+def test_nan_does_not_propagate_to_covariance() -> None:
+    z = z_ew(pd.Series([1.0, 2.0]), half_life=8, eps=1e-12)
+    cov = RobustEWCov2D(half_life=8)
+    state = cov.initialize_from_history(np.array([[0.0, 0.0], [1.0, 1.0]]))
+
+    updated = cov.update(state, np.array([z.iloc[0], 1.0]))
+
+    np.testing.assert_allclose(updated.mean, state.mean)
+    np.testing.assert_allclose(updated.cov_raw, state.cov_raw)
+    np.testing.assert_allclose(updated.cov_reg, state.cov_reg)
+    assert updated.pending_missing_steps == 1

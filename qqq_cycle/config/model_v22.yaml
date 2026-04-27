@@ -1,0 +1,24 @@
+# QQQ cycle-state v2.2 fixed hyperparameters.
+warmup_weeks: 260
+
+dual_memory:
+  robust_window_weeks: 104
+  ew_half_life_weeks: 260
+
+covariance:
+  half_life_weeks: 78
+
+drift:
+  theta_lo: 1.2
+  theta_hi: 1.8
+
+micro:
+  iir_delta: 0.9
+  heal_threshold: 0.25
+
+risk:
+  lambda_rho: 0.75
+  omega_state: [1.0, 0.7, 0.3, 0.6, 0.9]
+
+percentile_window_weeks: 520
+noise_quantile: 0.10
