@@ -11,6 +11,16 @@ from qqq_cycle.ops.publishing import (
     publish_from_live_summary_path,
     render_weekly_cycle_report,
 )
+from qqq_cycle.ops.revision_audit import (
+    MATERIAL_DELTA_THRESHOLD,
+    RevisionAuditArtifacts,
+    RevisionAuditInputError,
+    build_revision_detail,
+    build_revision_summary,
+    build_revision_tests,
+    load_snapshot_history,
+    write_revision_audit_outputs,
+)
 
 __all__ = [
     "DEFAULT_OPERATIONAL_SLA_CUTOFF",
@@ -22,4 +32,12 @@ __all__ = [
     "publish_cycle_snapshot",
     "publish_from_live_summary_path",
     "render_weekly_cycle_report",
+    "MATERIAL_DELTA_THRESHOLD",
+    "RevisionAuditArtifacts",
+    "RevisionAuditInputError",
+    "build_revision_detail",
+    "build_revision_summary",
+    "build_revision_tests",
+    "load_snapshot_history",
+    "write_revision_audit_outputs",
 ]
