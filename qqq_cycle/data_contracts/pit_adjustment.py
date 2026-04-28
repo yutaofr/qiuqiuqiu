@@ -69,6 +69,9 @@ class PITAdjustmentEngine:
     knowable on or before `asof`.
     """
 
+    source_label: str = "abstract"
+    asof_semantics: str = "strict_pit"
+
     def __init__(self, *, only_hindsight_adjusted_available: bool = False) -> None:
         self.only_hindsight_adjusted_available = only_hindsight_adjusted_available
 
@@ -82,6 +85,28 @@ class PITAdjustmentEngine:
         self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
     ) -> float:
         """Return single-day adjusted close knowable as of `asof`.
+
+        Inputs:
+            ticker: Security identifier to retrieve.
+            trade_date: Trading date of the raw close.
+            asof: Decision timestamp; only corporate actions knowable on or
+                before this timestamp may affect the returned value.
+
+        Output:
+            PIT-adjusted close for `ticker` and `trade_date`, expressed on the
+            corporate-action basis visible at `asof`.
+
+        Time semantics:
+            Implementations must use raw close and corporate-action factors
+            available as of `asof`; hindsight/backward-adjusted vendor series
+            are forbidden for production strict mode.
+
+        Failure modes:
+            DataNotAvailableError: no PIT data source is wired or no row is
+                visible at the requested timestamp.
+            HindsightAdjustedDataError: only backward-adjusted data exists.
+            InsufficientHistoryError: fewer than the requested `window` trading
+                days are available for rolling-window callers.
 
         Raises:
             HindsightAdjustedDataError if only backward-adjusted data exists.
@@ -115,6 +140,8 @@ class InMemoryPITAdjustmentEngine(PITAdjustmentEngine):
     This is not a production data loader. It operates only on supplied
     `PITPriceBar` records and filters every lookup by `asof_timestamp <= asof`.
     """
+
+    source_label: str = "in_memory_fixture"
 
     def __init__(self, bars: list[PITPriceBar]) -> None:
         super().__init__(only_hindsight_adjusted_available=False)
@@ -196,7 +223,13 @@ class CsvPITAdjustmentEngine(PITAdjustmentEngine):
     Relative-basis scaling:
         adj_price(tau) = raw_close(tau) * (adj_close[end] / raw_close[end])
     where [end] is the latest row visible as of asof.
+
+    `asof_semantics` is `eod_same_day`: yfinance-derived CSV rows are
+    retroactively adjusted at fetch time, which is a known production gap.
     """
+
+    source_label: str = "csv_yfinance_eod"
+    asof_semantics: str = "eod_same_day"
 
     def __init__(self, prices_dir: Path) -> None:
         super().__init__(only_hindsight_adjusted_available=False)

@@ -43,6 +43,8 @@ def test_pit_price_bar_rejects_future_asof_and_identity_mismatch() -> None:
 def test_base_engine_fails_closed_when_pit_data_unavailable() -> None:
     engine = PITAdjustmentEngine()
 
+    assert engine.source_label == "abstract"
+    assert engine.asof_semantics == "strict_pit"
     with pytest.raises(DataNotAvailableError):
         engine.get_adj_close("QQQ", pd.Timestamp("2024-01-02"), pd.Timestamp("2024-01-02"))
     with pytest.raises(DataNotAvailableError):
@@ -92,6 +94,130 @@ def test_in_memory_engine_adjusts_window_to_asof_basis() -> None:
     )
 
     np.testing.assert_allclose(window.to_numpy(), [200.0, 51.0])
+
+
+def test_pit_chained_corporate_action_precision() -> None:
+    bars = [
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-05"),
+            ticker="AAPL",
+            raw_close=120.0,
+            split_factor_cum_pti=1.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-08-05 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-06"),
+            ticker="AAPL",
+            raw_close=60.0,
+            split_factor_cum_pti=2.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-08-06 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-09-10"),
+            ticker="AAPL",
+            raw_close=30.0,
+            split_factor_cum_pti=8.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=240.0,
+            asof_timestamp=pd.Timestamp("2021-09-10 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-05"),
+            ticker="AAPL",
+            raw_close=120.0,
+            split_factor_cum_pti=1.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-08-07 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-06"),
+            ticker="AAPL",
+            raw_close=60.0,
+            split_factor_cum_pti=2.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-08-07 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-05"),
+            ticker="AAPL",
+            raw_close=120.0,
+            split_factor_cum_pti=1.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-09-10 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-06"),
+            ticker="AAPL",
+            raw_close=60.0,
+            split_factor_cum_pti=2.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-09-10 16:00"),
+        ),
+    ]
+    engine = InMemoryPITAdjustmentEngine(bars)
+
+    first_split_window = engine.get_adjusted_window(
+        "AAPL",
+        end_date=pd.Timestamp("2021-08-06"),
+        window=2,
+        asof=pd.Timestamp("2021-08-07 16:00"),
+    )
+    chained_window = engine.get_adjusted_window(
+        "AAPL",
+        end_date=pd.Timestamp("2021-09-10"),
+        window=3,
+        asof=pd.Timestamp("2021-09-10 16:00"),
+    )
+
+    assert not np.isclose(first_split_window.iloc[0], chained_window.iloc[0])
+    assert np.isclose(chained_window.iloc[0] / first_split_window.iloc[0], 4.0)
+    np.testing.assert_allclose(chained_window.to_numpy(), [960.0, 240.0, 30.0])
+
+
+def test_pit_no_lookahead_weekly_cutoff() -> None:
+    bars = [
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-06"),
+            ticker="AAPL",
+            raw_close=120.0,
+            split_factor_cum_pti=1.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=120.0,
+            asof_timestamp=pd.Timestamp("2021-08-06 16:00"),
+        ),
+        PITPriceBar(
+            trade_date=pd.Timestamp("2021-08-06"),
+            ticker="AAPL",
+            raw_close=120.0,
+            split_factor_cum_pti=2.0,
+            dividend_factor_cum_pti=1.0,
+            adj_close_pti=240.0,
+            asof_timestamp=pd.Timestamp("2021-08-09 16:00"),
+        ),
+    ]
+    engine = InMemoryPITAdjustmentEngine(bars)
+
+    prior_friday = engine.get_adj_close(
+        "AAPL",
+        trade_date=pd.Timestamp("2021-08-06"),
+        asof=pd.Timestamp("2021-08-06 16:00"),
+    )
+    action_visible = engine.get_adj_close(
+        "AAPL",
+        trade_date=pd.Timestamp("2021-08-06"),
+        asof=pd.Timestamp("2021-08-09 16:00"),
+    )
+
+    assert prior_friday == 120.0
+    assert action_visible == 240.0
 
 
 def test_in_memory_engine_rejects_future_asof_and_insufficient_history() -> None:
