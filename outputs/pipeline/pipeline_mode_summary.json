@@ -1,9 +1,20 @@
 {
-  "strict_fixture_passed": false,
-  "degraded_real_passed": false,
-  "real_strict_pipeline_passed": true,
+  "phase_7_verdict": "pass_conditional",
+  "strict_fixture_passed": true,
+  "degraded_real_passed": true,
+  "strict_real_passed": true,
+  "production_strict_pipeline_passed": false,
+  "strict_data_scope": "partial_real_seeded",
+  "strict_ticker_count": 20,
+  "strict_first_valid_week": "2021-04-09",
+  "strict_last_valid_week": "2025-01-03",
+  "strict_micro_source_range": "2021-01-01/2024-12-31",
+  "strict_real_production_eligible": false,
+  "strict_real_contract_grade": "conditional",
   "strict_blockers": [],
-  "degraded_reasons": [],
+  "degraded_reasons": [
+    "no contracts provided: h_t/rho_t unavailable"
+  ],
   "strict_real_blockers": [],
   "first_valid_state_date": "2010-01-22",
   "first_valid_stress_date": "2010-01-22"
