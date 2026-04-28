@@ -1,0 +1,386 @@
+{
+  "r1w": {
+    "kw_stat": 22.00109044508531,
+    "kw_pvalue": 0.00020032026672177556,
+    "pairwise": [
+      {
+        "state_i": 0,
+        "state_j": 1,
+        "z_stat": -1.9061519170055343,
+        "pvalue_raw": 0.05663049852956698,
+        "pvalue_holm": 0.22652199411826793,
+        "significant": false,
+        "cliffs_delta": -0.36185383244206776
+      },
+      {
+        "state_i": 0,
+        "state_j": 2,
+        "z_stat": -2.4687545671184075,
+        "pvalue_raw": 0.013558417571929982,
+        "pvalue_holm": 0.0813505054315799,
+        "significant": false,
+        "cliffs_delta": -0.426890756302521
+      },
+      {
+        "state_i": 0,
+        "state_j": 3,
+        "z_stat": -2.038568898152641,
+        "pvalue_raw": 0.04149307194723499,
+        "pvalue_holm": 0.20746535973617497,
+        "significant": false,
+        "cliffs_delta": -0.37254901960784315
+      },
+      {
+        "state_i": 0,
+        "state_j": 4,
+        "z_stat": -4.345823158437176,
+        "pvalue_raw": 1.3875432581260478e-05,
+        "pvalue_holm": 0.00013875432581260478,
+        "significant": true,
+        "cliffs_delta": -0.6142270861833106
+      },
+      {
+        "state_i": 1,
+        "state_j": 2,
+        "z_stat": -0.4662600943221119,
+        "pvalue_raw": 0.641029339091142,
+        "pvalue_holm": 1.0,
+        "significant": false,
+        "cliffs_delta": -0.09350649350649351
+      },
+      {
+        "state_i": 1,
+        "state_j": 3,
+        "z_stat": -0.16057917643968916,
+        "pvalue_raw": 0.8724248568306774,
+        "pvalue_holm": 1.0,
+        "significant": false,
+        "cliffs_delta": -0.04132231404958678
+      },
+      {
+        "state_i": 1,
+        "state_j": 4,
+        "z_stat": -2.920963766780351,
+        "pvalue_raw": 0.003489504079736057,
+        "pvalue_holm": 0.027916032637888458,
+        "significant": true,
+        "cliffs_delta": -0.33051444679351655
+      },
+      {
+        "state_i": 2,
+        "state_j": 3,
+        "z_stat": 0.2790476853159469,
+        "pvalue_raw": 0.780208230006696,
+        "pvalue_holm": 1.0,
+        "significant": false,
+        "cliffs_delta": 0.022510822510822513
+      },
+      {
+        "state_i": 2,
+        "state_j": 4,
+        "z_stat": -2.9807363192641403,
+        "pvalue_raw": 0.002875562729607637,
+        "pvalue_holm": 0.02588006456646873,
+        "significant": true,
+        "cliffs_delta": -0.36943521594684386
+      },
+      {
+        "state_i": 3,
+        "state_j": 4,
+        "z_stat": -2.7501465443681066,
+        "pvalue_raw": 0.005956861786343246,
+        "pvalue_holm": 0.04169803250440272,
+        "significant": true,
+        "cliffs_delta": -0.4094432699083862
+      }
+    ]
+  },
+  "R4w": {
+    "kw_stat": 61.185704001699946,
+    "kw_pvalue": 1.6341127680958657e-12,
+    "pairwise": [
+      {
+        "state_i": 0,
+        "state_j": 1,
+        "z_stat": -2.654444698384536,
+        "pvalue_raw": 0.007943905955752024,
+        "pvalue_holm": 0.031775623823008095,
+        "significant": true,
+        "cliffs_delta": -0.40463458110516937
+      },
+      {
+        "state_i": 0,
+        "state_j": 2,
+        "z_stat": -4.209248726634829,
+        "pvalue_raw": 2.562212103435013e-05,
+        "pvalue_holm": 0.00017935484724045092,
+        "significant": true,
+        "cliffs_delta": -0.7294117647058823
+      },
+      {
+        "state_i": 0,
+        "state_j": 3,
+        "z_stat": -1.5199532653133756,
+        "pvalue_raw": 0.12852272184990887,
+        "pvalue_holm": 0.3048988082054678,
+        "significant": false,
+        "cliffs_delta": -0.5508021390374331
+      },
+      {
+        "state_i": 0,
+        "state_j": 4,
+        "z_stat": -6.487210326536878,
+        "pvalue_raw": 8.744023522529276e-11,
+        "pvalue_holm": 8.744023522529275e-10,
+        "significant": true,
+        "cliffs_delta": -0.7811217510259918
+      },
+      {
+        "state_i": 1,
+        "state_j": 2,
+        "z_stat": -1.6369881956612486,
+        "pvalue_raw": 0.10163293606848925,
+        "pvalue_holm": 0.3048988082054678,
+        "significant": false,
+        "cliffs_delta": -0.21298701298701297
+      },
+      {
+        "state_i": 1,
+        "state_j": 3,
+        "z_stat": 1.3757729440913948,
+        "pvalue_raw": 0.168891940392077,
+        "pvalue_holm": 0.3048988082054678,
+        "significant": false,
+        "cliffs_delta": 0.07621671258034894
+      },
+      {
+        "state_i": 1,
+        "state_j": 4,
+        "z_stat": -4.60658940592067,
+        "pvalue_raw": 4.09327112375575e-06,
+        "pvalue_holm": 3.2746168990046e-05,
+        "significant": true,
+        "cliffs_delta": -0.48273431994362226
+      },
+      {
+        "state_i": 2,
+        "state_j": 3,
+        "z_stat": 3.240943159308667,
+        "pvalue_raw": 0.0011913493627980307,
+        "pvalue_holm": 0.005956746813990154,
+        "significant": true,
+        "cliffs_delta": 0.48744588744588746
+      },
+      {
+        "state_i": 2,
+        "state_j": 4,
+        "z_stat": -3.7182047448752624,
+        "pvalue_raw": 0.0002006436226658522,
+        "pvalue_holm": 0.0012038617359951132,
+        "significant": true,
+        "cliffs_delta": -0.5249169435215947
+      },
+      {
+        "state_i": 3,
+        "state_j": 4,
+        "z_stat": -6.070077500641796,
+        "pvalue_raw": 1.2784853728131112e-09,
+        "pvalue_holm": 1.1506368355318002e-08,
+        "significant": true,
+        "cliffs_delta": -0.8703312191684285
+      }
+    ]
+  },
+  "sigma4w": {
+    "kw_stat": 109.46810956864226,
+    "kw_pvalue": 9.449801265090748e-23,
+    "pairwise": [
+      {
+        "state_i": 0,
+        "state_j": 1,
+        "z_stat": -0.09283925069296495,
+        "pvalue_raw": 0.9260312681077516,
+        "pvalue_holm": 1.0,
+        "significant": false,
+        "cliffs_delta": -0.0374331550802139
+      },
+      {
+        "state_i": 0,
+        "state_j": 2,
+        "z_stat": 6.566287752743573,
+        "pvalue_raw": 5.158508700095342e-11,
+        "pvalue_holm": 4.126806960076274e-10,
+        "significant": true,
+        "cliffs_delta": 0.9697478991596639
+      },
+      {
+        "state_i": 0,
+        "state_j": 3,
+        "z_stat": 4.269763452504969,
+        "pvalue_raw": 1.956803889871827e-05,
+        "pvalue_holm": 9.784019449359136e-05,
+        "significant": true,
+        "cliffs_delta": 0.910873440285205
+      },
+      {
+        "state_i": 0,
+        "state_j": 4,
+        "z_stat": 6.031642601635913,
+        "pvalue_raw": 1.623014140299143e-09,
+        "pvalue_holm": 1.1361098982094002e-08,
+        "significant": true,
+        "cliffs_delta": 0.9781121751025992
+      },
+      {
+        "state_i": 1,
+        "state_j": 2,
+        "z_stat": 8.539271182533353,
+        "pvalue_raw": 1.35071046331088e-17,
+        "pvalue_holm": 1.35071046331088e-16,
+        "significant": true,
+        "cliffs_delta": 0.9748917748917749
+      },
+      {
+        "state_i": 1,
+        "state_j": 3,
+        "z_stat": 5.290432867026533,
+        "pvalue_raw": 1.2202720720997388e-07,
+        "pvalue_holm": 7.321632432598433e-07,
+        "significant": true,
+        "cliffs_delta": 0.9357208448117539
+      },
+      {
+        "state_i": 1,
+        "state_j": 4,
+        "z_stat": 7.586603752416128,
+        "pvalue_raw": 3.283994079197048e-14,
+        "pvalue_holm": 2.9555946712773433e-13,
+        "significant": true,
+        "cliffs_delta": 0.9802677942212826
+      },
+      {
+        "state_i": 2,
+        "state_j": 3,
+        "z_stat": -2.371381275005897,
+        "pvalue_raw": 0.01772173921014506,
+        "pvalue_holm": 0.07088695684058025,
+        "significant": false,
+        "cliffs_delta": -0.37662337662337664
+      },
+      {
+        "state_i": 2,
+        "state_j": 4,
+        "z_stat": -0.24466407496398823,
+        "pvalue_raw": 0.8067165467404598,
+        "pvalue_holm": 1.0,
+        "significant": false,
+        "cliffs_delta": -0.036544850498338874
+      },
+      {
+        "state_i": 3,
+        "state_j": 4,
+        "z_stat": 1.958868776185676,
+        "pvalue_raw": 0.050128156531043244,
+        "pvalue_holm": 0.15038446959312973,
+        "significant": false,
+        "cliffs_delta": 0.32910500352360816
+      }
+    ]
+  },
+  "mdd8w": {
+    "kw_stat": 91.34050167071322,
+    "kw_pvalue": 6.834428590280378e-19,
+    "pairwise": [
+      {
+        "state_i": 0,
+        "state_j": 1,
+        "z_stat": 0.9121304683855163,
+        "pvalue_raw": 0.3617000409898381,
+        "pvalue_holm": 0.9701717995319,
+        "significant": false,
+        "cliffs_delta": 0.26024955436720143
+      },
+      {
+        "state_i": 0,
+        "state_j": 2,
+        "z_stat": 6.824076407932773,
+        "pvalue_raw": 8.849277576107137e-12,
+        "pvalue_holm": 7.964349818496424e-11,
+        "significant": true,
+        "cliffs_delta": 0.957983193277311
+      },
+      {
+        "state_i": 0,
+        "state_j": 3,
+        "z_stat": 4.864064271432084,
+        "pvalue_raw": 1.1499954381454647e-06,
+        "pvalue_holm": 6.899972628872788e-06,
+        "significant": true,
+        "cliffs_delta": 0.964349376114082
+      },
+      {
+        "state_i": 0,
+        "state_j": 4,
+        "z_stat": 5.866280214495241,
+        "pvalue_raw": 4.456803572828064e-09,
+        "pvalue_holm": 3.119762500979645e-08,
+        "significant": true,
+        "cliffs_delta": 0.9781121751025992
+      },
+      {
+        "state_i": 1,
+        "state_j": 2,
+        "z_stat": 7.44852903840426,
+        "pvalue_raw": 9.438665727486353e-14,
+        "pvalue_holm": 9.438665727486352e-13,
+        "significant": true,
+        "cliffs_delta": 0.8606060606060606
+      },
+      {
+        "state_i": 1,
+        "state_j": 3,
+        "z_stat": 4.792423675120558,
+        "pvalue_raw": 1.647784673568851e-06,
+        "pvalue_holm": 8.238923367844255e-06,
+        "significant": true,
+        "cliffs_delta": 0.8117539026629935
+      },
+      {
+        "state_i": 1,
+        "state_j": 4,
+        "z_stat": 6.085488465617963,
+        "pvalue_raw": 1.1613668573539584e-09,
+        "pvalue_holm": 9.290934858831667e-09,
+        "significant": true,
+        "cliffs_delta": 0.8379140239605356
+      },
+      {
+        "state_i": 2,
+        "state_j": 3,
+        "z_stat": -1.8612467949032045,
+        "pvalue_raw": 0.06270933286141078,
+        "pvalue_holm": 0.25083733144564313,
+        "significant": false,
+        "cliffs_delta": -0.3038961038961039
+      },
+      {
+        "state_i": 2,
+        "state_j": 4,
+        "z_stat": -0.8489190198467966,
+        "pvalue_raw": 0.3959263546082531,
+        "pvalue_holm": 0.9701717995319,
+        "significant": false,
+        "cliffs_delta": -0.11827242524916944
+      },
+      {
+        "state_i": 3,
+        "state_j": 4,
+        "z_stat": 0.9875142515439631,
+        "pvalue_raw": 0.3233905998439667,
+        "pvalue_holm": 0.9701717995319,
+        "significant": false,
+        "cliffs_delta": 0.15574348132487667
+      }
+    ]
+  }
+}
