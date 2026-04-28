@@ -407,7 +407,15 @@ def iir_envelope_with_breaker(
     delta: float = 0.9,
     theta_heal: float = 0.25,
 ) -> float:
-    """Return x_t_lead per architecture spec §6.3 / model spec §9.11."""
+    """Return x_t_lead per architecture spec §6.3 / model spec §9.11.
+
+    NOTE: This is a standalone pure function that pre-shifts h_t by -0.5
+    (output x_lead ∈ [0, 0.5]).  It is NOT the IIR implementation used in the
+    production pipeline.  pipeline.py runs the IIR on raw h_t ∈ [0, 1] inline
+    in the weekly loop (Option B), consistent with compute_risk_score which
+    applies the shift internally via n_t = 2*max(h_t_lead - 0.5, 0).  Composing
+    this function with compute_risk_score would double-shift and produce n_t ≈ 0.
+    """
 
     if not 0.0 <= delta <= 1.0:
         raise ValueError("delta must be in [0, 1]")

@@ -27,6 +27,16 @@ from qqq_cycle.backtest.diagnostics import (
 from qqq_cycle.config import ModelConfig, load_config
 from qqq_cycle.core.covariance import RobustEWCov2D
 from qqq_cycle.core.drift_probe import DriftProbe
+from qqq_cycle.core.micro_layer import (
+    MicroDailyState,
+    MicroLayerUnavailableError,
+    compute_breadth,
+    compute_correlation_concentration,
+    compute_micro_score,
+    update_micro_daily_state,
+    weekly_median_micro,
+    z_wrob_156,
+)
 from qqq_cycle.core.proto_online import (
     PrototypeState,
     initialize_prototypes_from_history,
@@ -35,6 +45,9 @@ from qqq_cycle.core.proto_online import (
 from qqq_cycle.core.risk_layer import RiskScore, blended_state_weight, compute_risk_score
 from qqq_cycle.core.state_layer import compute_state_layer
 from qqq_cycle.core.stress_layer import compute_stress_layer
+from qqq_cycle.data_contracts.constituents import ConstituentStore
+from qqq_cycle.data_contracts.pit_adjustment import DataNotAvailableError, PITAdjustmentEngine
+from qqq_cycle.data_contracts.weights import WeightStore
 
 MODE_WARMUP = "warmup"
 MODE_DEGRADED = "degraded"
@@ -49,14 +62,20 @@ _HEAL_CIRCUIT_WEEKS = 3
 class PipelineContracts:
     """Strict input contracts that gate h_t and rho_t computation.
 
-    In Phase 6, weekly_h_t abstracts the full PIT+constituent+weight chain.
-    Setting weekly_h_t=None means the strict gate fails and h_t/rho_t stay null.
-    The three boolean flags track whether the production contracts are satisfied;
-    strict_contracts_satisfied in PipelineResult is True only when all four
-    conditions hold.
+    Phase 6 path: supply weekly_h_t directly (pre-computed or synthetic fixture).
+    Phase 7 path: supply pit_engine + constituent_store + weight_store; the
+        pipeline calls _compute_weekly_h_t_from_stores() internally.
+    If both are supplied, the stores path takes precedence.
+    The three boolean flags are auto-derived from the store objects when stores
+    are provided; otherwise they must be set explicitly (Phase 6 fixture).
     """
 
     weekly_h_t: pd.Series | None = None  # index=week_end Timestamps, values=raw h_t floats
+    # Phase 7 real stores (optional; trigger _compute_weekly_h_t_from_stores).
+    pit_engine: PITAdjustmentEngine | None = None
+    constituent_store: ConstituentStore | None = None
+    weight_store: WeightStore | None = None
+    # Explicit availability flags (Phase 6 fixture compat; overridden when stores present).
     pit_engine_available: bool = False
     constituents_available: bool = False
     weights_available: bool = False
@@ -164,6 +183,101 @@ def _build_interpretability(
     return row
 
 
+def _compute_weekly_h_t_from_stores(
+    weekly_index: pd.DatetimeIndex,
+    contracts: PipelineContracts,
+    config: ModelConfig,
+) -> pd.Series:
+    """Pre-compute weekly h_t from real daily micro stores.
+
+    Runs the daily micro loop over all business days in the weekly_index range,
+    resamples to weekly Friday medians, applies z_wrob_156 standardization, and
+    applies compute_micro_score to produce h_t per week.  Returns a pd.Series
+    aligned to weekly_index; weeks without sufficient data carry NaN.
+    """
+    pit_engine = contracts.pit_engine
+    constituent_store = contracts.constituent_store
+    weight_store = contracts.weight_store
+
+    start = weekly_index.min()
+    end = weekly_index.max()
+    trading_days = pd.bdate_range(start=start, end=end)
+
+    micro_state = MicroDailyState.empty()
+    daily_records: list[dict] = []
+
+    for day in trading_days:
+        trade_ts = pd.Timestamp(day).normalize()
+        # Use end-of-day asof so same-day EOD data (timestamped T16:00) is visible.
+        asof_eod = trade_ts + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        try:
+            snapshot = constituent_store.get_snapshot(trade_ts, asof=asof_eod)
+        except DataNotAvailableError:
+            continue
+        try:
+            raw_weights = weight_store.get_weights(trade_ts, asof=asof_eod)
+        except DataNotAvailableError:
+            continue
+
+        micro_state = update_micro_daily_state(
+            micro_state, snapshot.members, trade_ts
+        )
+        micro_state = micro_state.with_smoothed_weights(raw_weights)
+
+        try:
+            b_tau = compute_breadth(
+                members=micro_state.present_members,
+                smoothed_weights=dict(micro_state.smoothed_weights),
+                trade_date=trade_ts,
+                pit_engine=pit_engine,
+            )
+        except MicroLayerUnavailableError:
+            b_tau = float("nan")
+
+        c_tau = float("nan")
+        try:
+            price_windows: dict[str, pd.Series] = {}
+            for ticker in sorted(micro_state.present_members):
+                w = float(micro_state.smoothed_weights.get(ticker, 0.0))
+                if w <= 0.0:
+                    continue
+                try:
+                    price_windows[ticker] = pit_engine.get_adjusted_window(
+                        ticker, trade_ts, 60, asof=asof_eod
+                    )
+                except DataNotAvailableError:
+                    pass
+            c_tau = compute_correlation_concentration(
+                members=micro_state.present_members,
+                smoothed_weights=dict(micro_state.smoothed_weights),
+                price_windows=price_windows,
+            )
+        except MicroLayerUnavailableError:
+            c_tau = float("nan")
+
+        daily_records.append({"date": trade_ts, "b_tau": b_tau, "c_tau": c_tau})
+
+    if not daily_records:
+        return pd.Series(float("nan"), index=weekly_index, name="h_t")
+
+    daily_df = pd.DataFrame(daily_records).set_index("date")
+    weekly_bc = weekly_median_micro(daily_df)
+
+    uniform_weights = pd.Series(1.0, index=weekly_bc.index)
+    b_z = z_wrob_156(weekly_bc["b_wk"], weights=uniform_weights)
+    c_z = z_wrob_156(weekly_bc["c_wk"], weights=uniform_weights)
+
+    h_t_weekly = pd.Series(float("nan"), index=weekly_bc.index, name="h_t")
+    for idx in weekly_bc.index:
+        bz = b_z.get(idx, float("nan"))
+        cz = c_z.get(idx, float("nan"))
+        if np.isfinite(bz) and np.isfinite(cz):
+            score = compute_micro_score(bz, cz)
+            h_t_weekly[idx] = score.h_t
+
+    return h_t_weekly.reindex(weekly_index)
+
+
 def run_pipeline(
     weekly_macro_inputs: pd.DataFrame,
     contracts: PipelineContracts | None = None,
@@ -192,6 +306,27 @@ def run_pipeline(
     """
     if config is None:
         config = load_config()
+
+    # Phase 7: if real stores are provided, pre-compute weekly_h_t from daily micro loop.
+    # The stores path takes precedence over a pre-supplied weekly_h_t series.
+    if (
+        contracts is not None
+        and contracts.pit_engine is not None
+        and contracts.constituent_store is not None
+        and contracts.weight_store is not None
+    ):
+        computed_h_t = _compute_weekly_h_t_from_stores(
+            weekly_macro_inputs.index, contracts, config
+        )
+        contracts = PipelineContracts(
+            weekly_h_t=computed_h_t,
+            pit_engine=contracts.pit_engine,
+            constituent_store=contracts.constituent_store,
+            weight_store=contracts.weight_store,
+            pit_engine_available=True,
+            constituents_available=True,
+            weights_available=True,
+        )
 
     can_compute_h_t, degraded_reason = _check_strict_gate(contracts)
 
@@ -358,7 +493,14 @@ def run_pipeline(
             )
 
         mode = MODE_STRICT if h_t is not None else MODE_DEGRADED
-        row_degraded_reason = None if mode == MODE_STRICT else degraded_reason
+        if mode == MODE_STRICT:
+            row_degraded_reason = None
+        elif can_compute_h_t and h_t is None:
+            # Weekly h_t series was provided but NaN for this week (e.g., micro
+            # data not yet available or z_wrob window not yet satisfied).
+            row_degraded_reason = "h_t unavailable for this week: micro data window not satisfied"
+        else:
+            row_degraded_reason = degraded_reason
 
         interp = _build_interpretability(
             week_end, state, stress_frame, drift_frame, k_hat_t, p_t, h_t, rho_t

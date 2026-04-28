@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -180,6 +181,80 @@ class InMemoryPITAdjustmentEngine(PITAdjustmentEngine):
             float(basis) / rows["cum_factor"].to_numpy(dtype=float)
         )
         return pd.Series(adjusted, index=pd.DatetimeIndex(rows["trade_date"]), name=ticker)
+
+
+class CsvPITAdjustmentEngine(PITAdjustmentEngine):
+    """CSV-backed PIT adjustment engine for Phase 7 backtesting.
+
+    CSV format per ticker at prices_dir/{ticker}.csv:
+        trade_date,raw_close,adj_close,asof_timestamp
+
+    asof_timestamp = fetch date (conservative: all history appears known at
+    fetch time). Not suitable for live production; documents limitations in
+    seed_manifest.json.
+
+    Relative-basis scaling:
+        adj_price(tau) = raw_close(tau) * (adj_close[end] / raw_close[end])
+    where [end] is the latest row visible as of asof.
+    """
+
+    def __init__(self, prices_dir: Path) -> None:
+        super().__init__(only_hindsight_adjusted_available=False)
+        self._prices_dir = Path(prices_dir)
+        self._cache: dict[str, pd.DataFrame] = {}
+
+    def _load_ticker(self, ticker: str) -> pd.DataFrame:
+        if ticker not in self._cache:
+            path = self._prices_dir / f"{ticker}.csv"
+            if not path.exists():
+                raise DataNotAvailableError(f"no price file for {ticker}: {path}")
+            df = pd.read_csv(path)
+            df["trade_date"] = pd.to_datetime(df["trade_date"]).dt.normalize()
+            df["asof_timestamp"] = pd.to_datetime(df["asof_timestamp"], utc=False)
+            df["raw_close"] = df["raw_close"].astype(float)
+            df["adj_close"] = df["adj_close"].astype(float)
+            self._cache[ticker] = df.sort_values("trade_date").reset_index(drop=True)
+        return self._cache[ticker]
+
+    def get_adj_close(
+        self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
+    ) -> float:
+        df = self._load_ticker(ticker)
+        trade_ts = pd.Timestamp(trade_date).normalize()
+        asof_ts = pd.Timestamp(asof)
+        visible = df[(df["asof_timestamp"] <= asof_ts) & (df["trade_date"] == trade_ts)]
+        if visible.empty:
+            raise DataNotAvailableError(
+                f"no PIT close for {ticker} date={trade_ts} asof={asof_ts}"
+            )
+        latest = visible.iloc[-1]
+        basis = float(latest["adj_close"]) / float(latest["raw_close"])
+        return float(latest["raw_close"]) * basis
+
+    def get_adjusted_window(
+        self, ticker: str, end_date: pd.Timestamp, window: int, asof: pd.Timestamp
+    ) -> pd.Series:
+        if window < 1:
+            raise ValueError("window must be >= 1")
+        df = self._load_ticker(ticker)
+        end_ts = pd.Timestamp(end_date).normalize()
+        asof_ts = pd.Timestamp(asof)
+        visible = df[(df["asof_timestamp"] <= asof_ts) & (df["trade_date"] <= end_ts)]
+        if visible.empty:
+            raise DataNotAvailableError(
+                f"no PIT rows for {ticker} end={end_ts} asof={asof_ts}"
+            )
+        rows = visible.tail(window)
+        if len(rows) < window:
+            raise InsufficientHistoryError(
+                f"need {window} rows for {ticker} ending {end_ts}; got {len(rows)}"
+            )
+        latest = rows.iloc[-1]
+        basis = float(latest["adj_close"]) / float(latest["raw_close"])
+        adj_prices = rows["raw_close"].to_numpy(dtype=float) * basis
+        return pd.Series(
+            adj_prices, index=pd.DatetimeIndex(rows["trade_date"]), name=ticker
+        )
 
 
 def degrade_micro_mode(engine: object | None) -> DegradedMode:
