@@ -1,0 +1,40 @@
+{
+  "phase": "phase_11",
+  "frozen_rules": {
+    "assets": [
+      "QQQ",
+      "SHY"
+    ],
+    "weight_rule": "omega_qqq = 1 - rho_t; omega_shy = rho_t",
+    "rebalance_frequency": "weekly",
+    "signal_observation_time": "friday_close",
+    "execution_time": "next_trading_day_open",
+    "transaction_cost_bps": 5.0,
+    "transaction_cost_convention": "one_way_per_unit_turnover",
+    "turnover_threshold": 0.05,
+    "allow_leverage": false,
+    "allow_short": false
+  },
+  "circuit_breaker": {
+    "trigger_condition": "k_hat_t == s1_cluster_index AND drift_flag == 1",
+    "s1_cluster_index": 0,
+    "s1_derivation_method": "median_H_I_partition_of_pipeline_output",
+    "forced_weights": {
+      "omega_qqq": 0.0,
+      "omega_shy": 1.0
+    },
+    "release_condition": "2 consecutive weeks with k_hat_t != s1_cluster_index",
+    "observed_drift_flag_sum": 0
+  },
+  "benchmarks": [
+    "qqq_buyhold",
+    "shy_buyhold",
+    "static_6040"
+  ],
+  "risk_free_rate": 0.0,
+  "price_convention": "yfinance_auto_adjust_true_open_to_open",
+  "epoch": {
+    "start": "2021-04-09",
+    "end": "2025-01-03"
+  }
+}
