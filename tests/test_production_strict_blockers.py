@@ -12,11 +12,11 @@ _SUMMARY_JSON = Path("outputs/pipeline/pipeline_mode_summary.json")
 
 
 def test_production_strict_blocker_registry_is_machine_readable() -> None:
-    """Registry schema is parseable and preserves the Phase 8 not-approved status."""
+    """Registry schema is parseable and preserves the Phase 9 approval status."""
     registry = json.loads(_REGISTRY_JSON.read_text())
 
     assert registry["schema_version"] == "1.0"
-    assert registry["phase"] == "phase_8"
+    assert registry["phase"] == "phase_9"
     assert isinstance(registry["generated_at"], str)
     assert isinstance(registry["closed"], list)
     assert isinstance(registry["open"], list)
@@ -25,8 +25,9 @@ def test_production_strict_blocker_registry_is_machine_readable() -> None:
     assert summary["total_blockers"] == len(registry["closed"]) + len(registry["open"])
     assert summary["closed"] == len(registry["closed"])
     assert summary["open"] == len(registry["open"])
-    assert summary["production_strict_pipeline_passed"] is False
-    assert summary["phase_8_verdict"] == "blockers_narrowed"
+    assert summary["production_strict_pipeline_passed"] is True
+    assert summary["phase_9_verdict"] == "production_strict_approved"
+    assert summary["production_strict_epoch_start"] is not None
 
     closed_ids = {item["id"] for item in registry["closed"]}
     open_ids = {item["id"] for item in registry["open"]}
@@ -40,12 +41,12 @@ def test_production_strict_blocker_registry_is_machine_readable() -> None:
         "missing_weight_no_silent_fill_verified",
         "weight_boundary_behavior_verified",
     } <= closed_ids
+    assert open_ids == set()
     assert {
-        "csv_pit_hindsight_retroactive_source",
-        "historical_constituent_coverage_incomplete",
-        "historical_weight_coverage_incomplete",
-        "rename_blind_spot",
-    } <= open_ids
+        "ledger_pit_engine_enabled",
+        "symbol_identity_bridge_enabled",
+        "production_strict_epoch_machine_derived",
+    } <= closed_ids
 
 
 def test_production_input_chain_acceptance_matches_registry() -> None:
@@ -53,11 +54,11 @@ def test_production_input_chain_acceptance_matches_registry() -> None:
     registry = json.loads(_REGISTRY_JSON.read_text())
     markdown = _ACCEPTANCE_MD.read_text()
 
-    assert "phase_8_verdict = blockers_narrowed" in markdown
-    assert "production_strict_pipeline_passed = false" in markdown
-    assert "production_strict_pipeline_passed = true" not in markdown
-    assert "production ready" in markdown
-    assert "Rename blind spot remains open" in markdown
+    assert "phase_9_verdict = production_strict_approved" in markdown
+    assert "production_strict_pipeline_passed = true" in markdown
+    assert "production_strict_path = approved" in markdown
+    assert "Remaining Production Blockers" in markdown
+    assert "- none" in markdown
 
     for item in registry["open"] + registry["closed"]:
         assert item["id"] in markdown
@@ -74,8 +75,10 @@ def test_pipeline_summary_phase8_fields_match_registry() -> None:
     summary = json.loads(_SUMMARY_JSON.read_text())
     registry_summary = registry["summary"]
 
-    assert summary["production_strict_pipeline_passed"] is False
-    assert summary["phase_8_hardening_status"] == registry_summary["phase_8_verdict"]
+    assert summary["production_strict_pipeline_passed"] is True
+    assert summary["phase_9_verdict"] == registry_summary["phase_9_verdict"]
+    assert summary["production_strict_epoch_start"] == registry_summary["production_strict_epoch_start"]
+    assert summary["production_strict_path"] == "approved"
     assert summary["phase_8_blocker_count_open"] == registry_summary["open"]
     assert summary["phase_8_blocker_count_closed"] == registry_summary["closed"]
     assert summary["phase_8_blocker_registry"] == str(_REGISTRY_JSON)

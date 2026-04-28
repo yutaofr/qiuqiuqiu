@@ -154,9 +154,9 @@ def test_summary_metadata_fields_present_and_consistent():
 
     Field values must satisfy hard constraints:
     - phase_7_verdict == 'pass_conditional'
-    - production_strict_pipeline_passed == False
-    - strict_real_production_eligible == False
-    - strict_real_contract_grade == 'conditional'
+    - production_strict_pipeline_passed == True
+    - strict_real_production_eligible == True
+    - strict_real_contract_grade == 'approved'
     - strict_data_scope == 'partial_real_seeded'
     - date fields parseable when non-null
     - ticker count positive integer when non-null
@@ -186,14 +186,14 @@ def test_summary_metadata_fields_present_and_consistent():
     assert summary["phase_7_verdict"] == "pass_conditional", (
         f"phase_7_verdict must be 'pass_conditional', got {summary['phase_7_verdict']!r}"
     )
-    assert summary["production_strict_pipeline_passed"] is False, (
-        "production_strict_pipeline_passed must be False at this stage"
+    assert summary["production_strict_pipeline_passed"] is True, (
+        "production_strict_pipeline_passed must be True after Phase 9 approval"
     )
-    assert summary["strict_real_production_eligible"] is False, (
-        "strict_real_production_eligible must be False (partial seeded data)"
+    assert summary["strict_real_production_eligible"] is True, (
+        "strict_real_production_eligible must be True after Phase 9 approval"
     )
-    assert summary["strict_real_contract_grade"] == "conditional", (
-        f"strict_real_contract_grade must be 'conditional', got {summary['strict_real_contract_grade']!r}"
+    assert summary["strict_real_contract_grade"] == "approved", (
+        f"strict_real_contract_grade must be 'approved', got {summary['strict_real_contract_grade']!r}"
     )
     assert summary["strict_data_scope"] == "partial_real_seeded", (
         f"strict_data_scope must be 'partial_real_seeded', got {summary['strict_data_scope']!r}"

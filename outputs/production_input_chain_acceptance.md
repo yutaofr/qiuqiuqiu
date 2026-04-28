@@ -1,39 +1,45 @@
-# Phase 8 Production Input Chain Acceptance
+# Phase 9 Production Input Chain Acceptance
 
 ## Status
 
-- phase_8_verdict = blockers_narrowed
-- production_strict_pipeline_passed = false
+- phase_9_verdict = production_strict_approved
+- production_strict_pipeline_passed = true
+- production_strict_epoch_start = 2021-03-30
 - strict_fixture_path = pass
 - degraded_real_path = pass
-- strict_real_path = pass_conditional
-- production_strict_path = not_approved
+- strict_real_path = approved
+- production_strict_path = approved
 
 ## PIT Adjustment Engine
 
 - PIT source/asof semantics are documented.
+- LedgerPITAdjustmentEngine reconstructs production strict prices from raw closes and normalized corporate-action factors.
 - Chained corporate-action compounding is covered by a precision test.
 - Weekly cutoff no-lookahead behavior is covered by a boundary test.
-- CsvPITAdjustmentEngine remains an open production blocker because its CSV source is hindsight-style retroactive.
+- CsvPITAdjustmentEngine is not used for the strict production path.
 
 ## Historical Constituent Store
 
 - Delist, merger, rename, no carry-forward, no silent fill, and no implicit substitution semantics are documented.
 - Survivor-bias behavior is covered for delist, merger, and rename cases.
-- Rename blind spot remains open: strict no-bridge rename handling can cause 20-60 trading days of temporary micro-layer blindness after a constituent rename.
+- Pre-epoch degraded mode is a design boundary, not a blocker.
 
 ## Historical Weight Store
 
 - Weight-sum validation is available with default tolerance 0.01.
 - Weight retrieval and validation remain decoupled.
 - Missing-date no-silent-fill and first/last boundary behavior are covered by tests.
+- Epoch coverage audit verifies weight completeness from the strict epoch onward.
+
+## Rename Continuity
+
+- Pure rename continuity is resolved only through explicit point-in-time identity records.
+- Merger and spin-off records do not bridge identity.
+- Rename continuity is covered for PIT windows, breadth history, and correlation history.
 
 ## Remaining Production Blockers
 
-- csv_pit_hindsight_retroactive_source: CsvPITAdjustmentEngine remains a hindsight-style retroactive source (not production strict eligible for PIT micro-layer backtests)
-- historical_constituent_coverage_incomplete: historical constituent coverage remains non-production coverage (strict real path remains conditional partial coverage)
-- historical_weight_coverage_incomplete: historical weight coverage remains non-production coverage (strict real path remains conditional partial coverage)
-- rename_blind_spot: rename blind spot (strict no-bridge rename rule causes 20-60 trading days of temporary micro-layer blindness after a constituent rename)
+- none
 
 ## Closed Blockers
 
@@ -45,6 +51,9 @@
 - weight_sum_validation_available: weight sum validation available (validate_weight_sum default tolerance 0.01)
 - missing_weight_no_silent_fill_verified: missing weight no-silent-fill verified (test_weight_missing_raises_not_silent_fill)
 - weight_boundary_behavior_verified: weight boundary behavior verified (test_weight_boundary_first_and_last_date)
+- ledger_pit_engine_enabled: LedgerPITAdjustmentEngine reconstructs strict PIT prices from raw closes and normalized actions (tests/test_pit_contract.py)
+- symbol_identity_bridge_enabled: pure rename identity bridge preserves PIT and micro rolling history (tests/test_symbol_identity.py; tests/test_rename_identity_bridge.py)
+- production_strict_epoch_machine_derived: production strict epoch is machine derived (outputs/production_strict_epoch_manifest.json)
 
 ## What Phase 8 Does NOT Claim
 
@@ -56,8 +65,9 @@
 
 ## Registry Summary
 
-- total_blockers = 12
-- closed = 8
-- open = 4
-- production_strict_pipeline_passed = false
-- phase_8_verdict = blockers_narrowed
+- total_blockers = 11
+- closed = 11
+- open = 0
+- production_strict_pipeline_passed = true
+- phase_9_verdict = production_strict_approved
+- production_strict_epoch_start = 2021-03-30

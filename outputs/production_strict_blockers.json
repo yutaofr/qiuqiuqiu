@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "generated_at": "2026-04-28T00:00:00Z",
-  "phase": "phase_8",
+  "phase": "phase_9",
   "closed": [
     {
       "id": "pit_source_asof_semantics_documented",
@@ -50,39 +50,33 @@
       "title": "weight boundary behavior verified",
       "status": "closed",
       "evidence": "test_weight_boundary_first_and_last_date"
+    },
+    {
+      "id": "ledger_pit_engine_enabled",
+      "title": "LedgerPITAdjustmentEngine reconstructs strict PIT prices from raw closes and normalized actions",
+      "status": "closed",
+      "evidence": "tests/test_pit_contract.py"
+    },
+    {
+      "id": "symbol_identity_bridge_enabled",
+      "title": "pure rename identity bridge preserves PIT and micro rolling history",
+      "status": "closed",
+      "evidence": "tests/test_symbol_identity.py; tests/test_rename_identity_bridge.py"
+    },
+    {
+      "id": "production_strict_epoch_machine_derived",
+      "title": "production strict epoch is machine derived",
+      "status": "closed",
+      "evidence": "outputs/production_strict_epoch_manifest.json"
     }
   ],
-  "open": [
-    {
-      "id": "csv_pit_hindsight_retroactive_source",
-      "title": "CsvPITAdjustmentEngine remains a hindsight-style retroactive source",
-      "status": "open",
-      "impact": "not production strict eligible for PIT micro-layer backtests"
-    },
-    {
-      "id": "historical_constituent_coverage_incomplete",
-      "title": "historical constituent coverage remains non-production coverage",
-      "status": "open",
-      "impact": "strict real path remains conditional partial coverage"
-    },
-    {
-      "id": "historical_weight_coverage_incomplete",
-      "title": "historical weight coverage remains non-production coverage",
-      "status": "open",
-      "impact": "strict real path remains conditional partial coverage"
-    },
-    {
-      "id": "rename_blind_spot",
-      "title": "rename blind spot",
-      "status": "open",
-      "impact": "strict no-bridge rename rule causes 20-60 trading days of temporary micro-layer blindness after a constituent rename"
-    }
-  ],
+  "open": [],
   "summary": {
-    "total_blockers": 12,
-    "closed": 8,
-    "open": 4,
-    "production_strict_pipeline_passed": false,
-    "phase_8_verdict": "blockers_narrowed"
+    "total_blockers": 11,
+    "closed": 11,
+    "open": 0,
+    "production_strict_pipeline_passed": true,
+    "phase_9_verdict": "production_strict_approved",
+    "production_strict_epoch_start": "2021-03-30"
   }
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -132,6 +133,166 @@ class PITAdjustmentEngine:
         del ticker, end_date, window, asof
         self._fail_if_hindsight_only()
         raise DataNotAvailableError("PIT adjusted-window engine is not implemented")
+
+
+class _RawPriceStoreProtocol(Protocol):
+    def get_raw_close(self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp) -> float:
+        ...
+
+
+class _CorporateActionStoreProtocol(Protocol):
+    def get_adjustment_factor(
+        self,
+        ticker: str,
+        start_exclusive: pd.Timestamp,
+        end_inclusive: pd.Timestamp,
+        asof: pd.Timestamp,
+    ) -> float:
+        ...
+
+
+class _IdentityResolverProtocol(Protocol):
+    def resolve_symbol(self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp) -> str:
+        ...
+
+
+class LedgerPITAdjustmentEngine(PITAdjustmentEngine):
+    """Production strict PIT engine backed by raw prices and normalized actions.
+
+    Inputs:
+        raw_price_store: Store that exposes only raw, unadjusted closes.
+        corporate_action_store: Store of upstream-normalized equivalent factors.
+        identity_resolver: Optional pure-rename resolver. It is required when a
+            requested ticker's historical window crosses an explicit rename.
+
+    Output/time semantics:
+        Adjusted prices are reconstructed as:
+
+            P_adj(tau) = P_raw(tau) * product(f_u for tau < u <= basis_date)
+
+        using only raw closes and corporate-action records visible at `asof`.
+        The engine never reads hindsight/backward-adjusted close series.
+
+    Failure modes:
+        DataNotAvailableError: missing raw close, missing visible identity for
+            a rename boundary, or unavailable action ledger.
+        InsufficientHistoryError: fewer than the requested window rows can be
+            reconstructed.
+    """
+
+    source_label: str = "ledger_raw_close_corp_actions"
+    asof_semantics: str = "strict_pit"
+
+    def __init__(
+        self,
+        *,
+        raw_price_store: _RawPriceStoreProtocol,
+        corporate_action_store: _CorporateActionStoreProtocol,
+        identity_resolver: _IdentityResolverProtocol | None = None,
+    ) -> None:
+        super().__init__(only_hindsight_adjusted_available=False)
+        self.raw_price_store = raw_price_store
+        self.corporate_action_store = corporate_action_store
+        self.identity_resolver = identity_resolver
+
+    def _resolve_symbol_for_date(
+        self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
+    ) -> str:
+        requested = ticker.strip().upper()
+        if self.identity_resolver is None:
+            return requested
+        return self.identity_resolver.resolve_symbol(requested, trade_date, asof)
+
+    def _raw_close_with_identity(
+        self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
+    ) -> tuple[str, float]:
+        requested = ticker.strip().upper()
+        trade_ts = pd.Timestamp(trade_date).normalize()
+        asof_ts = pd.Timestamp(asof)
+        try:
+            return requested, self.raw_price_store.get_raw_close(requested, trade_ts, asof_ts)
+        except DataNotAvailableError as direct_exc:
+            resolved = self._resolve_symbol_for_date(requested, trade_ts, asof_ts)
+            if resolved == requested:
+                raise direct_exc
+            return resolved, self.raw_price_store.get_raw_close(resolved, trade_ts, asof_ts)
+
+    def _adjusted_close_on_basis(
+        self,
+        ticker: str,
+        trade_date: pd.Timestamp,
+        basis_date: pd.Timestamp,
+        asof: pd.Timestamp,
+    ) -> float:
+        symbol, raw_close = self._raw_close_with_identity(ticker, trade_date, asof)
+        factor = self.corporate_action_store.get_adjustment_factor(
+            symbol,
+            start_exclusive=pd.Timestamp(trade_date).normalize(),
+            end_inclusive=pd.Timestamp(basis_date).normalize(),
+            asof=pd.Timestamp(asof),
+        )
+        return float(raw_close) * float(factor)
+
+    def get_adj_close(
+        self, ticker: str, trade_date: pd.Timestamp, asof: pd.Timestamp
+    ) -> float:
+        trade_ts = pd.Timestamp(trade_date).normalize()
+        asof_ts = pd.Timestamp(asof)
+        basis_date = asof_ts.normalize()
+        return self._adjusted_close_on_basis(ticker, trade_ts, basis_date, asof_ts)
+
+    def get_adjusted_window(
+        self, ticker: str, end_date: pd.Timestamp, window: int, asof: pd.Timestamp
+    ) -> pd.Series:
+        if window < 1:
+            raise ValueError("window must be >= 1")
+        end_ts = pd.Timestamp(end_date).normalize()
+        asof_ts = pd.Timestamp(asof)
+        values: list[float] = []
+        dates: list[pd.Timestamp] = []
+        if hasattr(self.raw_price_store, "available_trade_dates"):
+            candidate_dates = list(
+                self.raw_price_store.available_trade_dates(ticker, end_ts, asof_ts)
+            )
+            if self.identity_resolver is not None:
+                historical_probe = pd.bdate_range(end=end_ts, periods=window)[0]
+                try:
+                    historical_symbol = self.identity_resolver.resolve_symbol(
+                        ticker, historical_probe, asof_ts
+                    )
+                except DataNotAvailableError:
+                    historical_symbol = ticker
+                if historical_symbol != ticker and hasattr(self.raw_price_store, "available_trade_dates"):
+                    old_dates = list(
+                        self.raw_price_store.available_trade_dates(
+                            historical_symbol, end_ts, asof_ts
+                        )
+                    )
+                    candidate_dates = sorted(set(candidate_dates) | set(old_dates))
+            iterator = reversed(candidate_dates)
+        else:
+            lookback_days = max(window * 3, window + 10)
+            iterator = reversed(pd.bdate_range(end=end_ts, periods=lookback_days))
+        last_error: DataNotAvailableError | None = None
+        for day in iterator:
+            trade_ts = pd.Timestamp(day).normalize()
+            try:
+                values.append(
+                    self._adjusted_close_on_basis(ticker, trade_ts, end_ts, asof_ts)
+                )
+                dates.append(trade_ts)
+                if len(values) == window:
+                    break
+            except DataNotAvailableError as exc:
+                last_error = exc
+                continue
+        if len(values) < window:
+            raise InsufficientHistoryError(
+                f"need {window} PIT rows for {ticker} ending {end_ts}; got {len(values)}"
+            ) from last_error
+        values.reverse()
+        dates.reverse()
+        return pd.Series(values, index=pd.DatetimeIndex(dates), name=ticker)
 
 
 class InMemoryPITAdjustmentEngine(PITAdjustmentEngine):

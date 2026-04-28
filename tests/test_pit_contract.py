@@ -7,9 +7,19 @@ from qqq_cycle.data_contracts.pit_adjustment import (
     HindsightAdjustedDataError,
     InMemoryPITAdjustmentEngine,
     InsufficientHistoryError,
+    LedgerPITAdjustmentEngine,
     PITAdjustmentEngine,
     PITPriceBar,
     degrade_micro_mode,
+)
+from qqq_cycle.data_contracts.raw_prices import RawPriceObservation, InMemoryRawPriceStore
+from qqq_cycle.data_contracts.corp_actions import (
+    CorporateActionEvent,
+    InMemoryCorporateActionStore,
+)
+from qqq_cycle.data_contracts.symbol_identity import (
+    InMemorySymbolIdentityResolver,
+    SymbolIdentityRecord,
 )
 
 
@@ -247,3 +257,122 @@ def test_in_memory_engine_rejects_future_asof_and_insufficient_history() -> None
             window=2,
             asof=pd.Timestamp("2024-01-02 16:00"),
         )
+
+
+def test_ledger_pit_chained_split_dividend_compounding() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-02"), "QQQ", 100.0, "official_raw", pd.Timestamp("2024-01-02 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-01-03"), "QQQ", 51.0, "official_raw", pd.Timestamp("2024-01-03 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-01-04"), "QQQ", 50.0, "official_raw", pd.Timestamp("2024-01-04 16:00")),
+        ]
+    )
+    actions = InMemoryCorporateActionStore(
+        [
+            CorporateActionEvent("QQQ", "split", pd.Timestamp("2024-01-03"), pd.Timestamp("2024-01-02 16:00"), 2.0, "normalized", "official_actions", pd.Timestamp("2024-01-02 16:00")),
+            CorporateActionEvent("QQQ", "dividend", pd.Timestamp("2024-01-04"), pd.Timestamp("2024-01-03 16:00"), 1.1, "normalized", "official_actions", pd.Timestamp("2024-01-03 16:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(raw_price_store=prices, corporate_action_store=actions)
+
+    window = engine.get_adjusted_window("QQQ", pd.Timestamp("2024-01-04"), 3, pd.Timestamp("2024-01-04 16:00"))
+
+    np.testing.assert_allclose(window.to_numpy(), [220.0, 56.1, 50.0])
+
+
+def test_ledger_pit_weekly_cutoff_no_lookahead() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-05"), "QQQ", 100.0, "official_raw", pd.Timestamp("2024-01-05 16:00")),
+        ]
+    )
+    actions = InMemoryCorporateActionStore(
+        [
+            CorporateActionEvent("QQQ", "split", pd.Timestamp("2024-01-08"), pd.Timestamp("2024-01-08 09:00"), 2.0, "normalized", "official_actions", pd.Timestamp("2024-01-08 09:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(raw_price_store=prices, corporate_action_store=actions)
+
+    assert engine.get_adj_close("QQQ", pd.Timestamp("2024-01-05"), pd.Timestamp("2024-01-05 16:00")) == 100.0
+    assert engine.get_adj_close("QQQ", pd.Timestamp("2024-01-05"), pd.Timestamp("2024-01-08 16:00")) == 200.0
+
+
+def test_ledger_pit_rename_crossing_through_identity_resolver() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-30"), "OLD", 100.0, "official_raw", pd.Timestamp("2024-01-30 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-01-31"), "OLD", 101.0, "official_raw", pd.Timestamp("2024-01-31 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-02-01"), "NEW", 102.0, "official_raw", pd.Timestamp("2024-02-01 16:00")),
+        ]
+    )
+    actions = InMemoryCorporateActionStore([])
+    identity = InMemorySymbolIdentityResolver(
+        [
+            SymbolIdentityRecord("OLD", "NEW", pd.Timestamp("2024-02-01"), "pure_rename", "issuer_actions", pd.Timestamp("2024-01-31 16:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(
+        raw_price_store=prices,
+        corporate_action_store=actions,
+        identity_resolver=identity,
+    )
+
+    window = engine.get_adjusted_window("NEW", pd.Timestamp("2024-02-01"), 3, pd.Timestamp("2024-02-01 16:00"))
+
+    assert list(window.index) == list(pd.to_datetime(["2024-01-30", "2024-01-31", "2024-02-01"]))
+    np.testing.assert_allclose(window.to_numpy(), [100.0, 101.0, 102.0])
+
+
+def test_ledger_pit_no_identity_record_fails_closed() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-31"), "OLD", 101.0, "official_raw", pd.Timestamp("2024-01-31 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-02-01"), "NEW", 102.0, "official_raw", pd.Timestamp("2024-02-01 16:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(
+        raw_price_store=prices,
+        corporate_action_store=InMemoryCorporateActionStore([]),
+    )
+
+    with pytest.raises(DataNotAvailableError):
+        engine.get_adjusted_window("NEW", pd.Timestamp("2024-02-01"), 2, pd.Timestamp("2024-02-01 16:00"))
+
+
+def test_ledger_pit_identity_boundary_no_lookahead() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-31"), "OLD", 101.0, "official_raw", pd.Timestamp("2024-01-31 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-02-01"), "NEW", 102.0, "official_raw", pd.Timestamp("2024-02-01 16:00")),
+        ]
+    )
+    identity = InMemorySymbolIdentityResolver(
+        [
+            SymbolIdentityRecord("OLD", "NEW", pd.Timestamp("2024-02-01"), "pure_rename", "issuer_actions", pd.Timestamp("2024-02-01 09:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(
+        raw_price_store=prices,
+        corporate_action_store=InMemoryCorporateActionStore([]),
+        identity_resolver=identity,
+    )
+
+    with pytest.raises(DataNotAvailableError):
+        engine.get_adjusted_window("NEW", pd.Timestamp("2024-02-01"), 2, pd.Timestamp("2024-01-31 16:00"))
+
+
+def test_ledger_pit_raw_close_only_reconstruction() -> None:
+    prices = InMemoryRawPriceStore(
+        [
+            RawPriceObservation(pd.Timestamp("2024-01-02"), "QQQ", 10.0, "official_raw", pd.Timestamp("2024-01-02 16:00")),
+            RawPriceObservation(pd.Timestamp("2024-01-03"), "QQQ", 11.0, "official_raw", pd.Timestamp("2024-01-03 16:00")),
+        ]
+    )
+    engine = LedgerPITAdjustmentEngine(
+        raw_price_store=prices,
+        corporate_action_store=InMemoryCorporateActionStore([]),
+    )
+
+    window = engine.get_adjusted_window("QQQ", pd.Timestamp("2024-01-03"), 2, pd.Timestamp("2024-01-03 16:00"))
+
+    np.testing.assert_allclose(window.to_numpy(), [10.0, 11.0])
