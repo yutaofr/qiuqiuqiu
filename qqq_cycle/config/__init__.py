@@ -56,6 +56,15 @@ class RiskConfig:
 
 
 @dataclass(frozen=True)
+class OpsConfig:
+    """Operational SLA settings for Phase 14 monitoring."""
+
+    operational_timezone: str
+    sla_cutoff_weekday: str
+    sla_cutoff_time: str
+
+
+@dataclass(frozen=True)
 class ModelConfig:
     """Model v2.2 hyperparameters.
 
@@ -71,6 +80,7 @@ class ModelConfig:
     drift: DriftConfig
     micro: MicroConfig
     risk: RiskConfig
+    ops: OpsConfig
     percentile_window_weeks: int
     noise_quantile: float
 
@@ -143,6 +153,7 @@ def load_config(path: str | Path | None = None) -> ModelConfig:
     drift = _require_mapping(raw, "drift")
     micro = _require_mapping(raw, "micro")
     risk = _require_mapping(raw, "risk")
+    ops = _require_mapping(raw, "ops")
     omega_state = tuple(float(value) for value in risk["omega_state"])
     if len(omega_state) != 5:
         raise ValueError("risk.omega_state must contain exactly five weights")
@@ -164,6 +175,11 @@ def load_config(path: str | Path | None = None) -> ModelConfig:
         risk=RiskConfig(
             lambda_rho=float(risk["lambda_rho"]),
             omega_state=omega_state,  # type: ignore[arg-type]
+        ),
+        ops=OpsConfig(
+            operational_timezone=str(ops["operational_timezone"]),
+            sla_cutoff_weekday=str(ops["sla_cutoff_weekday"]),
+            sla_cutoff_time=str(ops["sla_cutoff_time"]),
         ),
         percentile_window_weeks=int(raw["percentile_window_weeks"]),
         noise_quantile=float(raw["noise_quantile"]),

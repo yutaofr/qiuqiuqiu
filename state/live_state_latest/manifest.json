@@ -1,0 +1,21 @@
+{
+  "week_end": "2026-05-01",
+  "h_t_lead_prev": 0.44868653055531743,
+  "heal_count": 0,
+  "warmup_count": 1108,
+  "breaker_active": false,
+  "weeks_outside_s1": 0,
+  "prev_omega_qqq": 0.7216685211200469,
+  "proto_present": true,
+  "proto_seed_count": 0,
+  "last_successful_timestamps": {
+    "bootstrap": "2026-04-29T01:08:26.361103",
+    "last_run": "2026-04-28T23:19:11.702399+00:00",
+    "last_week_end": "2026-05-01"
+  },
+  "cov": {
+    "warmup_count": 1108,
+    "pending_missing_steps": 4,
+    "state_ok": true
+  }
+}

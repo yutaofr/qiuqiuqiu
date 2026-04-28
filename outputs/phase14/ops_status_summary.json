@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-04-28T23:19:38.792133Z",
+  "operational_now": "2026-04-28T19:19:38.792133-04:00",
+  "required_week_end": "2026-04-24",
+  "latest_available_week_end": "2026-05-01",
+  "published_at": "2026-04-28T23:19:28Z",
+  "operational_sla_cutoff": "SAT 12:00 America/New_York",
+  "current_mode": "degraded",
+  "current_status": "BLOCK",
+  "signal_validity": {
+    "status": "ok",
+    "reasons": []
+  },
+  "execution_readiness": {
+    "status": "ok",
+    "reasons": []
+  },
+  "data_health": {
+    "status": "block",
+    "reasons": [
+      "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01"
+    ]
+  },
+  "freshness": {
+    "stale_sources": [
+      "ai_gpr",
+      "constituents",
+      "weights"
+    ],
+    "stale_source_count": 3,
+    "fresh_source_count": 3,
+    "published_by_sla": null
+  },
+  "degraded_or_block_reasons": [
+    "h_t unavailable for this week: micro data window not satisfied",
+    "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00; weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
+    "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01"
+  ],
+  "current_alerts": [
+    {
+      "generated_at": "2026-04-28T23:19:38.787378Z",
+      "operational_now": "2026-04-28T23:19:38.787378Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-05-01",
+      "category": "data_health",
+      "alert_level": "block",
+      "alert_code": "missing_required_snapshot",
+      "message": "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01",
+      "runbook_section": "\u00a72.1"
+    }
+  ],
+  "runbook_path": "docs/OPS_RUNBOOK.md",
+  "runbook_references": [
+    "\u00a72.1"
+  ],
+  "operator_action": "see docs/OPS_RUNBOOK.md \u00a72.1",
+  "top_reason": "h_t unavailable for this week: micro data window not satisfied"
+}

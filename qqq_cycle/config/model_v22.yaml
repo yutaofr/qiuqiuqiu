@@ -20,5 +20,10 @@ risk:
   lambda_rho: 0.75
   omega_state: [1.0, 0.7, 0.3, 0.6, 0.9]
 
+ops:
+  operational_timezone: "America/New_York"
+  sla_cutoff_weekday: "SAT"
+  sla_cutoff_time: "12:00"
+
 percentile_window_weeks: 520
 noise_quantile: 0.10

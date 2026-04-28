@@ -1,0 +1,2 @@
+regime_label,mode,k_hat_t,run_count,min_duration_weeks,median_duration_weeks,mean_duration_weeks,max_duration_weeks,latest_run_start,latest_run_end,latest_run_duration_weeks
+degraded,degraded,,1,1,1.0,1.0,1,2026-05-01,2026-05-01,1

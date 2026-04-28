@@ -1,0 +1,51 @@
+{
+  "week_end": "2026-05-01",
+  "execution_tier": "signal_invalid",
+  "state_plane": {
+    "H_t": null,
+    "I_t": null,
+    "k_hat_t": null,
+    "state_label": null,
+    "state_probabilities": null,
+    "centroids": null
+  },
+  "factor_attribution": {
+    "L": null,
+    "T": 0.36421806351239877,
+    "P": null,
+    "E": null
+  },
+  "stress_attribution": {
+    "displacement_d": null,
+    "acceleration_a": null,
+    "g_raw": null,
+    "g_stress": null,
+    "s_t": null
+  },
+  "drift_metrics": {
+    "drift_probe_raw": 0.2240430073187387,
+    "drift_flag": 0.0,
+    "threshold_lo": 1.2,
+    "threshold_hi": 1.8
+  },
+  "health_metrics": {
+    "warmup_count": 1108,
+    "heal_count": 0,
+    "breaker_active": false,
+    "h_t_lead_prev": 0.44868653055531743
+  },
+  "pollution_flags": {
+    "fred_macro_fresh": true,
+    "ai_gpr_fresh": false,
+    "qqq_prices_fresh": true,
+    "constituents_fresh": false,
+    "weights_fresh": false,
+    "pit_prices_fresh": true,
+    "stale_sources": [
+      "ai_gpr",
+      "constituents",
+      "weights"
+    ],
+    "execution_tier": "signal_invalid"
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "run_timestamp": "2026-04-28T23:19:11.702399+00:00",
+  "week_end": "2026-05-01",
+  "mode": "degraded",
+  "execution_state": "block",
+  "execution_permitted": false,
+  "signal_valid_but_not_executable": false,
+  "degraded_reason": "h_t unavailable for this week: micro data window not satisfied",
+  "execution_block_reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00; weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
+  "strict_contracts_satisfied": false,
+  "k_hat_t": null,
+  "p_t": null,
+  "s_t": null,
+  "h_t": null,
+  "rho_t": null,
+  "I_t": {
+    "A_t": {
+      "H_components": [
+        NaN,
+        0.12747632222933955,
+        NaN
+      ],
+      "I_components": [
+        NaN,
+        0.5701111214787835,
+        NaN
+      ],
+      "stress_components": [
+        NaN,
+        NaN
+      ],
+      "micro_components": [
+        NaN,
+        NaN
+      ],
+      "rho_components": [
+        NaN,
+        NaN,
+        NaN
+      ]
+    },
+    "C_t": {
+      "c_rule": 0,
+      "c_const": 0,
+      "c_data": 1,
+      "c_micro": 1,
+      "c_drift": 0
+    },
+    "D_t": {
+      "d_state": 0.2240430073187387,
+      "d_stress": NaN,
+      "d_frag": NaN,
+      "d_abs": 0.2240430073187387
+    },
+    "H_t": {
+      "h_macro": 0,
+      "h_exo": 0,
+      "h_micro": 0,
+      "h_state": 1
+    }
+  },
+  "interpretability": {
+    "L": null,
+    "T": 0.36421806351239877,
+    "P": null,
+    "E": null,
+    "H": null,
+    "I": null,
+    "d": null,
+    "a": null,
+    "g_raw": null,
+    "g_stress": null,
+    "s": null,
+    "drift_probe_raw": 0.2240430073187387,
+    "drift_flag": 0,
+    "k_hat_t": null,
+    "p_t": null,
+    "h_t": null,
+    "rho_t": null
+  },
+  "omega_qqq_final": 0.7216685211200469,
+  "omega_shy_final": 0.27833147887995313,
+  "circuit_breaker_active": false,
+  "rebalance_required": false,
+  "reason": "rho_t_missing",
+  "freshness": [
+    {
+      "source_label": "fred_macro",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "degrade",
+      "reason": null
+    },
+    {
+      "source_label": "ai_gpr",
+      "last_observation_date": "2026-04-03",
+      "fresh_enough": false,
+      "blocking_level": "degrade",
+      "reason": "AI_GPR last obs 2026-04-03 < week_end 2026-05-01"
+    },
+    {
+      "source_label": "qqq_prices",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    },
+    {
+      "source_label": "constituents",
+      "last_observation_date": "unknown",
+      "fresh_enough": false,
+      "blocking_level": "block",
+      "reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00"
+    },
+    {
+      "source_label": "weights",
+      "last_observation_date": "unknown",
+      "fresh_enough": false,
+      "blocking_level": "block",
+      "reason": "weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00"
+    },
+    {
+      "source_label": "pit_prices",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    }
+  ]
+}

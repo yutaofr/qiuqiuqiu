@@ -1,0 +1,2 @@
+generated_at,operational_now,required_week_end,snapshot_week_end,category,alert_level,alert_code,message,runbook_section
+2026-04-28T23:19:38.787378Z,2026-04-28T23:19:38.787378Z,2026-04-24,2026-05-01,data_health,block,missing_required_snapshot,required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01,§2.1

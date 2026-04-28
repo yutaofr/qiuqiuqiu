@@ -14,5 +14,8 @@ def test_load_config_returns_typed_model_v22_defaults() -> None:
     assert config.micro.heal_threshold == 0.25
     assert config.risk.lambda_rho == 0.75
     assert config.risk.omega_state == (1.0, 0.7, 0.3, 0.6, 0.9)
+    assert config.ops.operational_timezone == "America/New_York"
+    assert config.ops.sla_cutoff_weekday == "SAT"
+    assert config.ops.sla_cutoff_time == "12:00"
     assert config.percentile_window_weeks == 520
     assert config.noise_quantile == 0.10

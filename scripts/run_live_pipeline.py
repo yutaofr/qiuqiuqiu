@@ -107,6 +107,9 @@ def _build_contracts() -> PipelineContracts | None:
 
 
 def _print_result(result: LiveRunResult) -> None:
+    def _fmt_metric(value: float | None) -> str:
+        return "n/a" if value is None else f"{value:.4f}"
+
     print(f"\n{'='*60}")
     print(f"  week_end:          {result.asof_week_end}")
     print(f"  pipeline mode:     {result.mode}")
@@ -117,9 +120,11 @@ def _print_result(result: LiveRunResult) -> None:
     if result.degraded_reason:
         print(f"  degraded_reason:   {result.degraded_reason}")
     s = result.signal_bundle
-    print(f"  k_hat_t={s['k_hat_t']}  s_t={s['s_t']:.4f if s['s_t'] else 'n/a'}  "
-          f"h_t={s['h_t']:.4f if s['h_t'] else 'n/a'}  "
-          f"rho_t={s['rho_t']:.4f if s['rho_t'] else 'n/a'}")
+    print(
+        f"  k_hat_t={s['k_hat_t']}  s_t={_fmt_metric(s['s_t'])}  "
+        f"h_t={_fmt_metric(s['h_t'])}  "
+        f"rho_t={_fmt_metric(s['rho_t'])}"
+    )
     p = result.portfolio_bundle
     print(f"  omega_qqq_final={p['omega_qqq_final']:.4f}  "
           f"cb={p['circuit_breaker_active']}  "

@@ -18,6 +18,7 @@
 - The drift probe is the minimum physical-space implementation from the v2.2 spec: 520-week rolling empirical percentiles, EW physical `H_raw`, rolling median/MAD baseline, and `|drift_probe_raw| >= 1.8` flagging.
 - `InMemoryPITAdjustmentEngine` is a deterministic fixture engine only. It validates as-of filtering and relative-basis scaling, but it is not a production corporate-action backfill engine.
 - `blended_state_weight` is implemented as an interface utility from model §10.1. No production `rho_t` output is implemented.
+- Phase 14 regime monitoring uses the latest immutable snapshot per `week_end` and keys monitored regimes conservatively as `mode` plus `k_hat_t` when available (for example `strict:k2`). This avoids conflating degraded and strict observations that share the same state index.
 
 ## Performance And MLX
 

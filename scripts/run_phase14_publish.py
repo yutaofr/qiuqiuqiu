@@ -13,6 +13,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from qqq_cycle.config import load_config  # noqa: E402
+from qqq_cycle.ops.alerts import format_operational_sla_cutoff  # noqa: E402
 from qqq_cycle.ops.publishing import (  # noqa: E402
     DEFAULT_OPERATIONAL_SLA_CUTOFF,
     PublishingInputError,
@@ -24,6 +26,12 @@ DEFAULT_OUTPUT_DIR = Path("outputs/phase14")
 
 
 def main(argv: list[str] | None = None) -> int:
+    default_sla_cutoff = DEFAULT_OPERATIONAL_SLA_CUTOFF
+    try:
+        default_sla_cutoff = format_operational_sla_cutoff(load_config().ops)
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--summary-path",
@@ -37,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--operational-sla-cutoff",
-        default=DEFAULT_OPERATIONAL_SLA_CUTOFF,
+        default=default_sla_cutoff,
         help="Operational SLA cutoff label embedded in published artifacts",
     )
     args = parser.parse_args(argv)

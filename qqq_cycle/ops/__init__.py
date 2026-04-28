@@ -21,6 +21,29 @@ from qqq_cycle.ops.revision_audit import (
     load_snapshot_history,
     write_revision_audit_outputs,
 )
+from qqq_cycle.ops.regime_monitor import (
+    RegimeMonitorArtifacts,
+    build_event_response_summary,
+    build_state_duration_summary,
+    build_state_transition_matrix,
+    load_latest_snapshot_per_week,
+    write_regime_monitor_outputs,
+)
+from qqq_cycle.ops.alerts import (
+    AlertArtifacts,
+    build_alert_log,
+    compute_operational_asof,
+    format_operational_sla_cutoff,
+    normalize_operational_now,
+    required_operational_week_end,
+    write_alert_log,
+)
+from qqq_cycle.ops.status import (
+    OpsStatusArtifacts,
+    build_ops_status_summary,
+    render_ops_status_markdown,
+    write_ops_status_outputs,
+)
 
 __all__ = [
     "DEFAULT_OPERATIONAL_SLA_CUTOFF",
@@ -40,4 +63,21 @@ __all__ = [
     "build_revision_tests",
     "load_snapshot_history",
     "write_revision_audit_outputs",
+    "RegimeMonitorArtifacts",
+    "build_event_response_summary",
+    "build_state_duration_summary",
+    "build_state_transition_matrix",
+    "load_latest_snapshot_per_week",
+    "write_regime_monitor_outputs",
+    "AlertArtifacts",
+    "build_alert_log",
+    "compute_operational_asof",
+    "format_operational_sla_cutoff",
+    "normalize_operational_now",
+    "required_operational_week_end",
+    "write_alert_log",
+    "OpsStatusArtifacts",
+    "build_ops_status_summary",
+    "render_ops_status_markdown",
+    "write_ops_status_outputs",
 ]

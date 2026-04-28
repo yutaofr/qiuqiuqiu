@@ -1,0 +1,19 @@
+{
+  "thresholds": {
+    "abs_delta_s_gt": 0.05,
+    "abs_delta_h_gt": 0.05,
+    "abs_delta_rho_gt": 0.05,
+    "mode_changed_is_material": true,
+    "k_hat_t_changed_is_material": true
+  },
+  "counts": {
+    "weeks_total": 1,
+    "weeks_with_multiple_runs": 1,
+    "material_revision_weeks": 0
+  },
+  "checks": {
+    "earliest_latest_selection_works": true,
+    "same_week_multiple_runs_supported": true,
+    "material_revision_thresholds_applied": true
+  }
+}
