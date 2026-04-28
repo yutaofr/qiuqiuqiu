@@ -89,6 +89,68 @@ def test_delisted_ticker_not_in_future_snapshot():
     assert "AAPL" in snap.members
 
 
+def test_delisted_ticker_absent_after_delist_date():
+    """A delisted ticker is absent from later as-of-visible snapshots."""
+    store = _store_from_csv("""
+        trade_date,ticker,asof_timestamp
+        2021-06-04,KEEP,2021-06-04T16:00:00
+        2021-06-04,OLD,2021-06-04T16:00:00
+        2021-06-07,KEEP,2021-06-07T16:00:00
+    """)
+
+    before = store.get_snapshot(
+        pd.Timestamp("2021-06-04"), asof=pd.Timestamp("2021-06-04T16:00:00")
+    )
+    after = store.get_snapshot(
+        pd.Timestamp("2021-06-07"), asof=pd.Timestamp("2021-06-07T16:00:00")
+    )
+
+    assert "OLD" in before.members
+    assert "OLD" not in after.members
+    assert after.asof_timestamp == pd.Timestamp("2021-06-07T16:00:00")
+
+
+def test_merged_ticker_disappears_on_merge_date():
+    """Merger disappearance does not imply substitution into the acquirer."""
+    store = _store_from_csv("""
+        trade_date,ticker,asof_timestamp
+        2021-07-09,ACQA,2021-07-09T16:00:00
+        2021-07-09,MERG,2021-07-09T16:00:00
+        2021-07-12,ACQA,2021-07-12T16:00:00
+    """)
+
+    pre_merge = store.get_snapshot(
+        pd.Timestamp("2021-07-09"), asof=pd.Timestamp("2021-07-09T16:00:00")
+    )
+    post_merge = store.get_snapshot(
+        pd.Timestamp("2021-07-12"), asof=pd.Timestamp("2021-07-12T16:00:00")
+    )
+
+    assert "MERG" in pre_merge.members
+    assert "MERG" not in post_merge.members
+    assert post_merge.members == frozenset({"ACQA"})
+
+
+def test_renamed_ticker_not_in_old_symbol_after_rename():
+    """Old and new rename symbols are independent; no bridge is inferred."""
+    store = _store_from_csv("""
+        trade_date,ticker,asof_timestamp
+        2021-08-13,STAL,2021-08-13T16:00:00
+        2021-08-16,FRESH,2021-08-16T16:00:00
+    """)
+
+    old_symbol_snapshot = store.get_snapshot(
+        pd.Timestamp("2021-08-13"), asof=pd.Timestamp("2021-08-13T16:00:00")
+    )
+    new_symbol_snapshot = store.get_snapshot(
+        pd.Timestamp("2021-08-16"), asof=pd.Timestamp("2021-08-16T16:00:00")
+    )
+
+    assert old_symbol_snapshot.members == frozenset({"STAL"})
+    assert "STAL" not in new_symbol_snapshot.members
+    assert new_symbol_snapshot.members == frozenset({"FRESH"})
+
+
 # ── T7.4: missing trade date raises DataNotAvailableError ─────────────────────
 
 def test_missing_trade_date_raises():

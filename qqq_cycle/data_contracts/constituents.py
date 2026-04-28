@@ -20,7 +20,27 @@ class PITConstituentSnapshot:
 
 
 class ConstituentStore:
-    """Interface for point-in-time constituent snapshots."""
+    """Interface for point-in-time constituent snapshots.
+
+    Implementations retrieve the constituent set that is explicitly recorded
+    for `trade_date` and visible as of the caller's decision timestamp. They
+    must not carry forward prior membership, silently fill missing dates, or
+    substitute related securities.
+
+    Corporate-action semantics:
+        Delisting: a delisted ticker is absent from future snapshots unless a
+            future row explicitly records it.
+        Merger: the disappearing ticker is absent after the merger effective
+            date; the surviving/acquiring ticker appears only if its own row is
+            present for the requested snapshot.
+        Rename: the old symbol terminates and the new symbol is treated as an
+            independent member; no automatic bridge is inferred.
+
+    Known limitation:
+        Strict no-bridge rename handling can make the micro layer temporarily
+        blind to renamed constituents for 20-60 trading days while rolling
+        history warms under the new symbol.
+    """
 
     def get_snapshot(
         self, trade_date: pd.Timestamp, asof: pd.Timestamp
@@ -40,6 +60,17 @@ class CsvConstituentStore(ConstituentStore):
     as-of rule: only rows where asof_timestamp <= asof are visible.
     A constituent added Monday (asof=Monday 16:00) is NOT visible to a
     Friday-EOD decision (asof=Friday 16:00) that precedes it.
+
+    The CSV is a snapshot store, not an event resolver. Delists, mergers, and
+    renames are represented only by explicit future snapshots:
+        - no carry-forward from previous trade dates,
+        - no silent fill for missing trade dates,
+        - no implicit merger substitution,
+        - no automatic old-symbol/new-symbol bridge for renames.
+
+    The rename rule is intentionally conservative but leaves a known open
+    production limitation: renamed constituents may be unavailable to micro
+    rolling windows for 20-60 trading days after the rename.
     """
 
     def __init__(self, path: Path) -> None:

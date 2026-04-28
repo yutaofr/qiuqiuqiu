@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-04-28T00:00:00Z",
+  "phase": "phase_8",
+  "closed": [
+    {
+      "id": "pit_source_asof_semantics_documented",
+      "title": "PIT source/asof semantics documented",
+      "status": "closed",
+      "evidence": "PITAdjustmentEngine source_label/asof_semantics contract documented."
+    },
+    {
+      "id": "pit_chained_compounding_verified",
+      "title": "chained corporate-action compounding verified",
+      "status": "closed",
+      "evidence": "test_pit_chained_corporate_action_precision"
+    },
+    {
+      "id": "pit_no_lookahead_cutoff_verified",
+      "title": "PIT no-lookahead cutoff verified",
+      "status": "closed",
+      "evidence": "test_pit_no_lookahead_weekly_cutoff"
+    },
+    {
+      "id": "constituent_semantics_documented",
+      "title": "constituent delist/merge/rename semantics documented",
+      "status": "closed",
+      "evidence": "CsvConstituentStore docstring"
+    },
+    {
+      "id": "survivor_bias_constituent_behavior_tested",
+      "title": "survivor-bias constituent behavior tested",
+      "status": "closed",
+      "evidence": "test_delisted_ticker_absent_after_delist_date; test_merged_ticker_disappears_on_merge_date; test_renamed_ticker_not_in_old_symbol_after_rename"
+    },
+    {
+      "id": "weight_sum_validation_available",
+      "title": "weight sum validation available",
+      "status": "closed",
+      "evidence": "validate_weight_sum default tolerance 0.01"
+    },
+    {
+      "id": "missing_weight_no_silent_fill_verified",
+      "title": "missing weight no-silent-fill verified",
+      "status": "closed",
+      "evidence": "test_weight_missing_raises_not_silent_fill"
+    },
+    {
+      "id": "weight_boundary_behavior_verified",
+      "title": "weight boundary behavior verified",
+      "status": "closed",
+      "evidence": "test_weight_boundary_first_and_last_date"
+    }
+  ],
+  "open": [
+    {
+      "id": "csv_pit_hindsight_retroactive_source",
+      "title": "CsvPITAdjustmentEngine remains a hindsight-style retroactive source",
+      "status": "open",
+      "impact": "not production strict eligible for PIT micro-layer backtests"
+    },
+    {
+      "id": "historical_constituent_coverage_incomplete",
+      "title": "historical constituent coverage remains non-production coverage",
+      "status": "open",
+      "impact": "strict real path remains conditional partial coverage"
+    },
+    {
+      "id": "historical_weight_coverage_incomplete",
+      "title": "historical weight coverage remains non-production coverage",
+      "status": "open",
+      "impact": "strict real path remains conditional partial coverage"
+    },
+    {
+      "id": "rename_blind_spot",
+      "title": "rename blind spot",
+      "status": "open",
+      "impact": "strict no-bridge rename rule causes 20-60 trading days of temporary micro-layer blindness after a constituent rename"
+    }
+  ],
+  "summary": {
+    "total_blockers": 12,
+    "closed": 8,
+    "open": 4,
+    "production_strict_pipeline_passed": false,
+    "phase_8_verdict": "blockers_narrowed"
+  }
+}

@@ -9,7 +9,11 @@ import pandas as pd
 import pytest
 
 from qqq_cycle.data_contracts.pit_adjustment import DataNotAvailableError
-from qqq_cycle.data_contracts.weights import CsvWeightStore
+from qqq_cycle.data_contracts.weights import (
+    CsvWeightStore,
+    WeightSumViolationError,
+    validate_weight_sum,
+)
 
 
 def _store_from_csv(text: str) -> CsvWeightStore:
@@ -116,3 +120,50 @@ def test_seed_weights_reasonable():
     assert all(w > 0 for w in weights.values())
     total = sum(weights.values())
     assert 0.5 < total < 1.5, f"weights sum {total} is implausible"
+
+
+def test_weight_sum_within_tolerance():
+    """Explicit weight-sum validation accepts default 1% tolerance."""
+    validate_weight_sum({"AAPL": 0.40, "MSFT": 0.35, "NVDA": 0.245})
+
+    with pytest.raises(WeightSumViolationError):
+        validate_weight_sum({"AAPL": 0.40, "MSFT": 0.35, "NVDA": 0.20})
+
+
+def test_weight_missing_raises_not_silent_fill():
+    """Missing weight dates raise instead of forward/zero filling."""
+    store = _store_from_csv("""
+        trade_date,ticker,weight,asof_timestamp
+        2021-04-09,AAPL,0.40,2021-04-09T16:00:00
+        2021-04-09,MSFT,0.35,2021-04-09T16:00:00
+    """)
+
+    with pytest.raises(DataNotAvailableError):
+        store.get_weights(
+            pd.Timestamp("2021-04-12"), asof=pd.Timestamp("2021-04-12T16:00:00")
+        )
+
+
+def test_weight_boundary_first_and_last_date():
+    """First and last explicit dates are retrievable without interpolation."""
+    store = _store_from_csv("""
+        trade_date,ticker,weight,asof_timestamp
+        2021-05-03,AAPL,0.40,2021-05-03T16:00:00
+        2021-05-03,MSFT,0.60,2021-05-03T16:00:00
+        2021-05-07,AAPL,0.45,2021-05-07T16:00:00
+        2021-05-07,MSFT,0.55,2021-05-07T16:00:00
+    """)
+
+    first = store.get_weights(
+        pd.Timestamp("2021-05-03"), asof=pd.Timestamp("2021-05-03T16:00:00")
+    )
+    last = store.get_weights(
+        pd.Timestamp("2021-05-07"), asof=pd.Timestamp("2021-05-07T16:00:00")
+    )
+
+    assert first == pytest.approx({"AAPL": 0.40, "MSFT": 0.60})
+    assert last == pytest.approx({"AAPL": 0.45, "MSFT": 0.55})
+    with pytest.raises(DataNotAvailableError):
+        store.get_weights(
+            pd.Timestamp("2021-05-05"), asof=pd.Timestamp("2021-05-07T16:00:00")
+        )
