@@ -41,6 +41,7 @@ from qqq_cycle.pipeline import (
     PipelineResult,
     _check_strict_gate,
     _safe_float,
+    _build_audit_interpretability,
     _build_interpretability,
     _compute_weekly_h_t_from_stores,
     MODE_WARMUP,
@@ -175,12 +176,13 @@ def _run_pipeline_step(
         cov_state = cov.update(cov_state, np.array([np.nan, np.nan]))
 
     s_t = s_t_val
-    I_t = i_t_val
 
     # Strict gate: h_t and rho_t.
     h_t: float | None = None
     rho_t: float | None = None
     strict_contracts_satisfied: bool | None = False
+    omega_t: float | None = None
+    n_t: float | None = None
     omega_state = np.asarray(config.risk.omega_state, dtype=float)
 
     if can_compute_h_t and h_t_raw is not None:
@@ -209,6 +211,7 @@ def _run_pipeline_step(
                 h_t_lead=h_t_lead,
                 lambda_rho=config.risk.lambda_rho,
             )
+            n_t = float(risk.n_t)
             rho_t = float(risk.rho_t)
         strict_contracts_satisfied = True
 
@@ -222,6 +225,19 @@ def _run_pipeline_step(
 
     interp = _build_interpretability(
         week_end, state_frame, stress_frame, drift_frame, k_hat_t, p_t, h_t, rho_t
+    )
+    I_t = _build_audit_interpretability(
+        week_end,
+        state_frame,
+        stress_frame,
+        drift_frame,
+        omega_t=omega_t,
+        s_t=s_t,
+        n_t=n_t,
+        h_t=h_t,
+        h_t_available=h_t is not None,
+        rho_t_available=rho_t is not None,
+        config=config,
     )
 
     result = PipelineResult(
@@ -518,7 +534,7 @@ class LiveRuntime:
             "s_t": pipeline_result.s_t,
             "h_t": pipeline_result.h_t,
             "rho_t": pipeline_result.rho_t,
-            "I_t": pipeline_result.I_t,
+            "I_t": asdict(pipeline_result.I_t) if pipeline_result.I_t is not None else None,
         }
         portfolio_bundle = {
             "omega_qqq_target": portfolio_weights.omega_qqq_target,

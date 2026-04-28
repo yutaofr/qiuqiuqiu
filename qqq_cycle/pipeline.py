@@ -27,6 +27,11 @@ from qqq_cycle.backtest.diagnostics import (
 from qqq_cycle.config import ModelConfig, load_config
 from qqq_cycle.core.covariance import RobustEWCov2D
 from qqq_cycle.core.drift_probe import DriftProbe
+from qqq_cycle.core.interpretability import (
+    InterpretabilityRecord,
+    ModuleHealth,
+    build_interpretability,
+)
 from qqq_cycle.core.micro_layer import (
     MicroDailyState,
     MicroLayerUnavailableError,
@@ -97,7 +102,7 @@ class PipelineResult:
     s_t: float | None
     h_t: float | None
     rho_t: float | None
-    I_t: float | None
+    I_t: InterpretabilityRecord | None
     interpretability: dict | None
     mode: str
     degraded_reason: str | None
@@ -111,7 +116,11 @@ class PipelineResult:
             "s_t": self.s_t,
             "h_t": self.h_t,
             "rho_t": self.rho_t,
-            "I_t": self.I_t,
+            "I_t": (
+                asdict(self.I_t)
+                if isinstance(self.I_t, InterpretabilityRecord)
+                else self.I_t
+            ),
             "interpretability": json.dumps(self.interpretability) if self.interpretability else None,
             "mode": self.mode,
             "degraded_reason": self.degraded_reason,
@@ -148,6 +157,88 @@ def _safe_float(val: Any) -> float | None:
         return f if np.isfinite(f) else None
     except (TypeError, ValueError):
         return None
+
+
+def _value_or_nan(value: float | None) -> float:
+    return float(value) if value is not None else float("nan")
+
+
+def _delta4(frame: pd.DataFrame, week_end: pd.Timestamp, column: str) -> float:
+    if week_end not in frame.index:
+        return float("nan")
+    loc = frame.index.get_loc(week_end)
+    if isinstance(loc, slice) or isinstance(loc, np.ndarray):
+        return float("nan")
+    if int(loc) < 4:
+        return float("nan")
+    current = _safe_float(frame.iloc[int(loc)][column])
+    previous = _safe_float(frame.iloc[int(loc) - 4][column])
+    if current is None or previous is None:
+        return float("nan")
+    return current - previous
+
+
+def _build_audit_interpretability(
+    week_end: pd.Timestamp,
+    state: pd.DataFrame,
+    stress_frame: pd.DataFrame,
+    drift_frame: pd.DataFrame,
+    *,
+    omega_t: float | None,
+    s_t: float | None,
+    n_t: float | None,
+    h_t: float | None,
+    h_t_available: bool,
+    rho_t_available: bool,
+    config: ModelConfig,
+) -> InterpretabilityRecord:
+    """Build the model-spec I_t audit object from point-in-time layer outputs."""
+
+    L_t = _safe_float(state.at[week_end, "L"]) if week_end in state.index else None
+    T_t = _safe_float(state.at[week_end, "T"]) if week_end in state.index else None
+    P_t = _safe_float(state.at[week_end, "P"]) if week_end in state.index else None
+    E_t = _safe_float(state.at[week_end, "E"]) if week_end in state.index else None
+    g_raw = _safe_float(stress_frame.at[week_end, "g_raw"]) if week_end in stress_frame.index else None
+    g_stress = _safe_float(stress_frame.at[week_end, "g_stress"]) if week_end in stress_frame.index else None
+    delta_abs = (
+        _safe_float(drift_frame.at[week_end, "drift_probe_raw"])
+        if week_end in drift_frame.index
+        else None
+    )
+    module_health = ModuleHealth(
+        h_macro=int(L_t is not None and T_t is not None and P_t is not None),
+        h_exo=int(E_t is not None),
+        h_micro=int(h_t_available),
+        h_state=1,
+    )
+    return build_interpretability(
+        L_t=_value_or_nan(L_t),
+        T_t=_value_or_nan(T_t),
+        P_t=_value_or_nan(P_t),
+        delta4_L_t=_delta4(state, week_end, "L"),
+        delta4_T_t=_delta4(state, week_end, "T"),
+        delta4_P_t=_delta4(state, week_end, "P"),
+        g_tilde=_value_or_nan(g_raw),
+        e_tilde=_value_or_nan(E_t),
+        b_tilde=float("nan"),
+        c_tilde=float("nan"),
+        omega_t=_value_or_nan(omega_t),
+        s_t=_value_or_nan(s_t),
+        n_t=_value_or_nan(n_t),
+        eta_t=float("nan"),
+        is_rule_week=False,
+        has_constituent_change=False,
+        data_contaminated=not rho_t_available,
+        v60_count=0,
+        universe_count=0,
+        delta_abs_raw=_value_or_nan(delta_abs),
+        d_state=_value_or_nan(delta_abs),
+        g_stress=_value_or_nan(g_stress),
+        micro_raw=_value_or_nan(h_t),
+        module_health=module_health,
+        lambda_rho=config.risk.lambda_rho,
+        theta_drift_hi=config.drift.theta_hi,
+    )
 
 
 def _build_interpretability(
@@ -431,12 +522,11 @@ def run_pipeline(
             else None
         )
 
-        # I_t: impulse theta coordinate.
-        I_t = float(x[1]) if np.isfinite(x[1]) else None
-
         # Strict gate: h_t and rho_t.
         h_t: float | None = None
         rho_t: float | None = None
+        omega_t: float | None = None
+        n_t: float | None = None
         strict_contracts_satisfied: bool | None = False
 
         if can_compute_h_t:
@@ -484,6 +574,7 @@ def run_pipeline(
                         h_t_lead=h_t_lead,
                         lambda_rho=config.risk.lambda_rho,
                     )
+                    n_t = float(risk.n_t)
                     rho_t = float(risk.rho_t)
 
             strict_contracts_satisfied = (
@@ -504,6 +595,19 @@ def run_pipeline(
 
         interp = _build_interpretability(
             week_end, state, stress_frame, drift_frame, k_hat_t, p_t, h_t, rho_t
+        )
+        I_t = _build_audit_interpretability(
+            week_end,
+            state,
+            stress_frame,
+            drift_frame,
+            omega_t=omega_t,
+            s_t=s_t,
+            n_t=n_t,
+            h_t=h_t,
+            h_t_available=h_t is not None,
+            rho_t_available=rho_t is not None,
+            config=config,
         )
 
         results.append(

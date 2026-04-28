@@ -202,8 +202,36 @@ Nothing in Phase 3–4 can run until Phase 2 produces h_t^{lead}. Phase 5 is ind
 ### Checkpoint: Phase 4
 
 - [x] `pytest tests/test_interpretability.py` passes
-- [ ] Full system output tuple `(k_hat_t, p_t, s_t, h_t, rho_t, I_t)` producible end-to-end in strict mode
-  - NOTE 2026-04-27: Module-level producers for `h_t`, `rho_t`, and `I_t` are implemented and tested, but no strict end-to-end pipeline wiring exists in this slice.
+- [x] Full system output tuple `(k_hat_t, p_t, s_t, h_t, rho_t, I_t)` producible end-to-end in strict mode
+  - DONE 2026-04-28: Phase 13 wires strict pipeline `I_t` to the spec-level `InterpretabilityRecord` (`A_t`, `C_t`, `D_t`, `H_t`) while preserving the legacy flat `interpretability` dict for live/dashboard consumers.
+
+---
+
+### Phase 13: Strict End-to-End Output Contract
+
+- [x] **Task 8: Wire spec-level `I_t` into strict pipeline output** — DONE 2026-04-28
+
+  **Description:** Convert the strict pipeline's model tuple from a field-complete row with scalar impulse `I_t` into the spec tuple where `I_t` is the auditable interpretability object. Keep the existing flat `interpretability` dictionary as a compatibility view for live dashboard exports and portfolio helpers.
+
+  **Acceptance criteria:**
+  - [x] Strict rows expose non-null `(k_hat_t, p_t, s_t, h_t, rho_t, I_t)`
+  - [x] `I_t` is an `InterpretabilityRecord` with `A_t`, `C_t`, `D_t`, and `H_t`
+  - [x] `PipelineResult.to_dict()` serializes the audit object without losing its nested structure
+  - [x] Live incremental runtime uses the same audit-object builder as batch pipeline
+  - [x] Warmup rows keep all output fields null
+  - [x] Degraded rows continue to fail closed for `h_t`/`rho_t` with explicit reasons
+
+  **Verification:**
+  - [x] `pytest tests/test_pipeline_integration.py`
+  - [x] `pytest tests/test_live_runtime.py tests/test_live_interpretability.py`
+  - [x] `pytest tests/test_strict_real_pipeline.py`
+
+  **Files:**
+  - `qqq_cycle/pipeline.py`
+  - `qqq_cycle/live/runtime.py`
+  - `tests/test_pipeline_integration.py`
+
+  **Estimated scope:** S
 
 ---
 

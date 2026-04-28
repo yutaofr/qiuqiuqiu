@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from qqq_cycle.core.interpretability import InterpretabilityRecord
 from qqq_cycle.pipeline import (
     MODE_DEGRADED,
     MODE_STRICT,
@@ -110,7 +111,7 @@ def test_warmup_gate_enforced():
 # ---------------------------------------------------------------------------
 
 def test_strict_fixture_full_tuple():
-    """Strict mode rows have non-null h_t and rho_t."""
+    """Strict mode rows have the full model-spec output tuple."""
     results = run_strict_fixture()
     strict_rows = [r for r in results if r.mode == MODE_STRICT]
     assert len(strict_rows) > 0, "no strict rows produced — fixture or routing broken"
@@ -118,14 +119,52 @@ def test_strict_fixture_full_tuple():
     for r in strict_rows:
         assert r.h_t is not None, f"h_t must be non-null in strict row {r.week_end}"
         assert r.rho_t is not None, f"rho_t must be non-null in strict row {r.week_end}"
+        assert isinstance(r.I_t, InterpretabilityRecord), (
+            f"I_t must be InterpretabilityRecord in strict row {r.week_end}"
+        )
         assert r.k_hat_t is not None, f"k_hat_t must be non-null in strict row {r.week_end}"
         assert r.s_t is not None, f"s_t must be non-null in strict row {r.week_end}"
-        assert r.I_t is not None, f"I_t must be non-null in strict row {r.week_end}"
         assert r.degraded_reason is None, (
             f"degraded_reason must be None in strict row {r.week_end}"
         )
         assert 0.0 <= r.h_t <= 1.0, f"h_t={r.h_t} out of [0,1] in row {r.week_end}"
         assert 0.0 <= r.rho_t <= 1.0, f"rho_t={r.rho_t} out of [0,1] in row {r.week_end}"
+
+
+def test_strict_fixture_serializes_audit_interpretability_object():
+    """Strict result serialization includes auditable A/C/D/H interpretability."""
+    strict_row = next(r for r in run_strict_fixture() if r.mode == MODE_STRICT)
+
+    serialized = strict_row.to_dict()
+
+    assert serialized["I_t"] is not None
+    assert set(serialized["I_t"]) == {"A_t", "C_t", "D_t", "H_t"}
+    assert set(serialized["I_t"]["A_t"]) == {
+        "H_components",
+        "I_components",
+        "stress_components",
+        "micro_components",
+        "rho_components",
+    }
+    assert set(serialized["I_t"]["C_t"]) == {
+        "c_rule",
+        "c_const",
+        "c_data",
+        "c_micro",
+        "c_drift",
+    }
+    assert set(serialized["I_t"]["D_t"]) == {
+        "d_state",
+        "d_stress",
+        "d_frag",
+        "d_abs",
+    }
+    assert set(serialized["I_t"]["H_t"]) == {
+        "h_macro",
+        "h_exo",
+        "h_micro",
+        "h_state",
+    }
 
 
 # ---------------------------------------------------------------------------
