@@ -1,0 +1,3 @@
+account_id,week_end,symbol,quantity,market_price,market_value,weight,cash,source,paper_only,broker_submission_allowed
+paper_sandbox_01,2026-04-24,QQQ,1.2,500.0,600.0,0.6,0.0,seed_fixture,true,false
+paper_sandbox_01,2026-04-24,BIL,4.0,100.0,400.0,0.4,0.0,seed_fixture,true,false
