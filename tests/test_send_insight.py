@@ -98,6 +98,43 @@ def test_missing_webhook_fails_outside_dry_run(tmp_path: Path, monkeypatch: pyte
     assert exit_code != 0
 
 
+def test_alert_webhook_url_is_accepted_outside_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    markdown_path = _write_markdown(tmp_path / "insight.md", "# Weekly Digest\n\nhello")
+    monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://discord.example/alert-webhook")
+
+    called = {"value": False}
+
+    def _fake_urlopen(req, timeout=None):  # type: ignore[no-untyped-def]
+        called["value"] = True
+        assert req.get_header("User-agent") == "Mozilla/5.0"
+
+        class _Resp:
+            status = 204
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        return _Resp()
+
+    monkeypatch.setattr(send_insight.request, "urlopen", _fake_urlopen)
+
+    exit_code = send_insight.main(
+        [
+            "--mode",
+            "insight",
+            "--input",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code == 0
+    assert called["value"] is True
+
+
 def test_long_markdown_is_truncated_in_dry_run(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     markdown_path = _write_markdown(tmp_path / "insight.md", "A" * 5000)
 

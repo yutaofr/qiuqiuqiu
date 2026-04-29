@@ -66,6 +66,13 @@ def _write_env_file(base: Path, *, mode: int, webhook_url: str = "https://discor
     return path
 
 
+def _write_env_file_with_alert(base: Path, *, mode: int, webhook_url: str = "https://discord.example/webhook") -> Path:
+    path = base / ".env"
+    path.write_text(f"ALERT_WEBHOOK_URL={webhook_url}\n", encoding="utf-8")
+    path.chmod(mode)
+    return path
+
+
 def test_dry_run_does_not_call_gemini_or_discord(tmp_path: Path) -> None:
     _write_phase14_snapshot(tmp_path)
     _write_phase15_summary(tmp_path)
@@ -383,6 +390,31 @@ def test_env_file_600_is_accepted(tmp_path: Path) -> None:
     _write_phase14_snapshot(tmp_path)
     _write_phase15_summary(tmp_path)
     _write_env_file(tmp_path, mode=0o600)
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
+            "--week-end",
+            "2026-04-24",
+            "--dry-run",
+            "--work-root",
+            str(tmp_path),
+        ],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / ".temp" / "weekly" / "2026-04-24" / "run_status.json").exists()
+
+
+def test_env_file_alert_webhook_url_is_accepted(tmp_path: Path) -> None:
+    _write_phase14_snapshot(tmp_path)
+    _write_phase15_summary(tmp_path)
+    _write_env_file_with_alert(tmp_path, mode=0o600)
 
     result = subprocess.run(
         [

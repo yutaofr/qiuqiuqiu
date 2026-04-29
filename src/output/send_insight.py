@@ -17,6 +17,8 @@ from urllib import error, request
 DESCRIPTION_LIMIT = 4096
 DEFAULT_TIMEOUT_SECONDS = 10.0
 MAX_ATTEMPTS = 3
+WEBHOOK_ENV_VARS = ("DISCORD_WEBHOOK_URL", "ALERT_WEBHOOK_URL")
+USER_AGENT = "Mozilla/5.0"
 
 
 @dataclass(frozen=True)
@@ -111,7 +113,11 @@ def _post_webhook(webhook_url: str, payload: dict[str, Any]) -> None:
         webhook_url,
         data=body,
         method="POST",
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+            "User-Agent": USER_AGENT,
+        },
     )
     for attempt in range(MAX_ATTEMPTS):
         try:
@@ -132,6 +138,14 @@ def _post_webhook(webhook_url: str, payload: dict[str, Any]) -> None:
             raise RuntimeError(f"Discord webhook failed with HTTP {exc.code}") from exc
         except error.URLError as exc:
             raise RuntimeError(f"Discord webhook request failed: {exc.reason}") from exc
+
+
+def _resolve_webhook_url() -> str | None:
+    for env_name in WEBHOOK_ENV_VARS:
+        value = os.environ.get(env_name)
+        if value:
+            return value
+    return None
 
 
 def _print_dry_run(mode: str, prepared: PreparedPayload, source_path: Path, extra: dict[str, Any] | None = None) -> int:
@@ -168,9 +182,9 @@ def main(argv: list[str] | None = None) -> int:
         prepared = _build_insight_payload(markdown, args.input)
         if args.dry_run:
             return _print_dry_run("insight", prepared, args.input)
-        webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+        webhook_url = _resolve_webhook_url()
         if not webhook_url:
-            print("DISCORD_WEBHOOK_URL is required unless --dry-run is set", file=sys.stderr)
+            print("DISCORD_WEBHOOK_URL or ALERT_WEBHOOK_URL is required unless --dry-run is set", file=sys.stderr)
             return 2
         try:
             _post_webhook(webhook_url, prepared.payload)
@@ -192,9 +206,9 @@ def main(argv: list[str] | None = None) -> int:
             args.validated_json,
             extra={"stage": args.stage, "message": args.message},
         )
-    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    webhook_url = _resolve_webhook_url()
     if not webhook_url:
-        print("DISCORD_WEBHOOK_URL is required unless --dry-run is set", file=sys.stderr)
+        print("DISCORD_WEBHOOK_URL or ALERT_WEBHOOK_URL is required unless --dry-run is set", file=sys.stderr)
         return 2
     try:
         _post_webhook(webhook_url, prepared.payload)

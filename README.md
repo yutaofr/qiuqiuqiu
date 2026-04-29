@@ -270,7 +270,7 @@ The weekly digest orchestration runs locally on the macOS host and stays within 
 Operational invariants:
 
 - `--week-end` is optional; the orchestrator computes the latest completed Friday in `America/New_York`.
-- `DISCORD_WEBHOOK_URL` is read only through the allowlisted environment loader.
+- `ALERT_WEBHOOK_URL` is read through the allowlisted environment loader; `DISCORD_WEBHOOK_URL` is accepted as a compatibility alias.
 - `.env` must be `0600` if present.
 - `WORK_ROOT` defaults to the repository root and can be overridden with `--work-root`.
 

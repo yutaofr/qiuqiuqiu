@@ -9,7 +9,8 @@ The workflow is paper-only. It does not submit broker orders.
 ## Inputs
 
 - Local repository checkout
-- `DISCORD_WEBHOOK_URL` in `.env` or the process environment
+- `ALERT_WEBHOOK_URL` in `.env` or the process environment
+- `DISCORD_WEBHOOK_URL` is also accepted as a compatibility alias
 - Optional `WEEKLY_ORCH_NOW_UTC` or `--now-utc` for deterministic dry-runs
 
 ## Outputs
@@ -49,6 +50,7 @@ The `--week-end` flag is optional. When omitted, the script computes the latest 
 - `notified_error_<stage>.ok` prevents duplicate error spam.
 - `--resend` requires `--resend-reason`.
 - `.env` must be `0600` before it is read.
+- The webhook loader accepts `ALERT_WEBHOOK_URL` first and `DISCORD_WEBHOOK_URL` as a fallback alias.
 
 ## Troubleshooting
 
@@ -56,4 +58,3 @@ The `--week-end` flag is optional. When omitted, the script computes the latest 
 - If the Phase 15 summary is missing, run `python scripts/run_phase15_sandbox.py --week-end YYYY-MM-DD`.
 - If Discord delivery fails, inspect the weekly log under `logs/weekly/`.
 - If the script rejects `.env`, fix the file mode to `0600`.
-

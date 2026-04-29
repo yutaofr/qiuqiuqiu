@@ -171,12 +171,13 @@ import os
 import stat
 import sys
 
-allowed = {"DISCORD_WEBHOOK_URL"}
+allowed = {"DISCORD_WEBHOOK_URL", "ALERT_WEBHOOK_URL"}
 env_path = Path(sys.argv[1])
 mode = stat.S_IMODE(os.stat(env_path).st_mode)
 if mode != 0o600:
     print(f"refusing to read {env_path}: permissions must be 0600, got {oct(mode)}", file=sys.stderr)
     raise SystemExit(1)
+values = {}
 for raw_line in env_path.read_text(encoding="utf-8").splitlines():
     line = raw_line.strip()
     if not line or line.startswith("#") or "=" not in line:
@@ -186,8 +187,11 @@ for raw_line in env_path.read_text(encoding="utf-8").splitlines():
     if key not in allowed:
         continue
     value = value.strip().strip("'\"")
-    print(value)
-    break
+    values[key] = value
+if "DISCORD_WEBHOOK_URL" in values:
+    print(values["DISCORD_WEBHOOK_URL"])
+elif "ALERT_WEBHOOK_URL" in values:
+    print(values["ALERT_WEBHOOK_URL"])
 PY
 )"
   if [[ -n "$webhook" ]]; then
