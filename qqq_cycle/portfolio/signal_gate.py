@@ -14,6 +14,7 @@ As-of semantics:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 from typing import Any, Mapping
 
 
@@ -36,7 +37,11 @@ class SignalEligibilityResult:
 
 
 def _value_available(value: Any) -> bool:
-    return value is not None
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return math.isfinite(float(value))
+    return True
 
 
 def evaluate_signal_eligibility(
@@ -86,6 +91,8 @@ def evaluate_signal_eligibility(
         return build("execution_not_permitted", signal_eligible=False, execution_allowed=False)
     if not strict_gate_passed:
         return build("strict_gate_failed", signal_eligible=False, execution_allowed=False)
+    if not h_t_available:
+        return build("h_t_missing", signal_eligible=False, execution_allowed=False)
     if not rho_t_available:
         return build("rho_t_missing", signal_eligible=False, execution_allowed=False)
     if not k_hat_t_available:

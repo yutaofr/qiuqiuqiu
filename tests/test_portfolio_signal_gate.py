@@ -84,6 +84,34 @@ def test_rho_missing_is_not_eligible(tmp_path: Path) -> None:
     assert result.reason == "rho_t_missing"
 
 
+def test_h_t_missing_is_not_eligible(tmp_path: Path) -> None:
+    snapshot = _strict_snapshot(tmp_path)
+    snapshot["h_t"] = None
+
+    result = evaluate_signal_eligibility(
+        snapshot,
+        paper_only=True,
+        broker_submission_allowed=False,
+    )
+
+    assert result.signal_eligible is False
+    assert result.reason == "h_t_missing"
+
+
+def test_nan_numeric_values_are_not_treated_as_available(tmp_path: Path) -> None:
+    snapshot = _strict_snapshot(tmp_path)
+    snapshot["rho_t"] = float("nan")
+
+    result = evaluate_signal_eligibility(
+        snapshot,
+        paper_only=True,
+        broker_submission_allowed=False,
+    )
+
+    assert result.signal_eligible is False
+    assert result.reason == "rho_t_missing"
+
+
 def test_strict_gate_failed_is_not_eligible(tmp_path: Path) -> None:
     snapshot = _strict_snapshot(tmp_path)
     snapshot["strict_gate_passed"] = False
