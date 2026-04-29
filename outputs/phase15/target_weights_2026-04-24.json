@@ -1,0 +1,20 @@
+{
+  "broker_submission_allowed": false,
+  "generation_mode": "hold_prior_or_policy_default",
+  "gross_exposure": 1.0,
+  "known_limitations": [
+    "discrete_bucket_turnover_risk"
+  ],
+  "net_exposure": 1.0,
+  "paper_only": true,
+  "policy_id": "portfolio_policy_v1",
+  "policy_version": 1,
+  "reason": "degraded_backfill_signal",
+  "rho_bucket": null,
+  "signal_eligible": false,
+  "target_weights": {
+    "BIL": 0.4,
+    "QQQ": 0.6
+  },
+  "week_end": "2026-04-24"
+}

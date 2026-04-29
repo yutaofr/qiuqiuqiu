@@ -1,0 +1,20 @@
+{
+  "broker_submission_allowed": false,
+  "estimated_commission": 0.0,
+  "estimated_slippage_cost": 0.0,
+  "estimated_total_cost": 0.0,
+  "estimated_turnover": 0.0,
+  "execution_allowed": false,
+  "known_limitations": [
+    "discrete_bucket_turnover_risk"
+  ],
+  "orders_count": 0,
+  "paper_only": true,
+  "phase14_snapshot_hash": "a4303b47f434087de62b2bdb8417de75b2747ecc8f92a105cc999b4b1b7a5593",
+  "reason": "degraded_backfill_signal",
+  "rebalance_required": false,
+  "report_sha256": "66663697eda96bf77e2700c84e883203899a7a9144c04b08cb1d2ad558e43f98",
+  "signal_eligible": false,
+  "target_generation_mode": "hold_prior_or_policy_default",
+  "week_end": "2026-04-24"
+}

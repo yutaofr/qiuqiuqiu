@@ -1,0 +1,1 @@
+order_id,week_end,symbol,side,quantity,notional,estimated_price,slippage_bps,estimated_slippage_cost,commission,estimated_total_cost,reason,paper_only,broker_submission_allowed
