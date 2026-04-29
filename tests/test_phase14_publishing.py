@@ -16,6 +16,13 @@ def _write_live_summary(path: Path) -> dict:
         "execution_state": "execute",
         "execution_permitted": True,
         "signal_valid_but_not_executable": False,
+        "backfill_mode": None,
+        "micro_state_frozen": False,
+        "micro_envelope_internal_state": 0.42,
+        "micro_breaker_internal_state": "inactive",
+        "micro_rho_update_state": "observed",
+        "contract_source": "stores_strict",
+        "strict_gate_passed": True,
         "degraded_reason": None,
         "execution_block_reason": None,
         "strict_contracts_satisfied": True,
@@ -158,6 +165,8 @@ def test_weekly_report_matches_latest_snapshot(tmp_path: Path) -> None:
     assert latest_snapshot["mode"] == source_summary["mode"]
     assert latest_snapshot["p_t"] == source_summary["p_t"]
     assert latest_snapshot["drift_flag"] == source_summary["interpretability"]["drift_flag"]
+    assert latest_snapshot["contract_source"] == source_summary["contract_source"]
+    assert latest_snapshot["strict_gate_passed"] == source_summary["strict_gate_passed"]
 
     assert f"- week_end: {snapshot.week_end}" in latest_report
     assert f"- published_at: {snapshot.published_at}" in latest_report
@@ -167,3 +176,4 @@ def test_weekly_report_matches_latest_snapshot(tmp_path: Path) -> None:
     assert f"- h_t: {snapshot.h_t}" in latest_report
     assert f"- rho_t: {snapshot.rho_t}" in latest_report
     assert f"- drift_flag: {snapshot.drift_flag}" in latest_report
+    assert f"- contract_source: {snapshot.contract_source}" in latest_report

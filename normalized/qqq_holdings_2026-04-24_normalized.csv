@@ -1,0 +1,106 @@
+raw_symbol,canonical_symbol,instrument_id,id_type,share_class,raw_weight,normalized_weight,normalization_status,normalization_source,normalization_override_flag,raw_name,isin,cusip,sedol,exchange,asset_class,price_join_required
+NVDA,NVDA,CUSIP:67066G104,CUSIP,,9.31772,0.0931772,resolved_by_primary_id,canonical_master_primary_id,False,NVIDIA Corp,,67066G104,,NASDAQ,equity,True
+AAPL,AAPL,CUSIP:037833100,CUSIP,,6.954839,0.06954839,resolved_by_primary_id,canonical_master_primary_id,False,Apple Inc,,037833100,,NASDAQ,equity,True
+MSFT,MSFT,CUSIP:594918104,CUSIP,,5.584229,0.055842289999999996,resolved_by_primary_id,canonical_master_primary_id,False,Microsoft Corp,,594918104,,NASDAQ,equity,True
+AMZN,AMZN,CUSIP:023135106,CUSIP,,4.962081,0.04962081,resolved_by_primary_id,canonical_master_primary_id,False,Amazon.com Inc,,023135106,,NASDAQ,equity,True
+GOOGL,GOOGL,CUSIP:02079K305,CUSIP,,3.610663,0.03610663,resolved_by_primary_id,canonical_master_primary_id,False,Alphabet Inc Class A,,02079K305,,NASDAQ,equity,True
+META,META,CUSIP:30303M102,CUSIP,,3.543073,0.03543073,resolved_by_primary_id,canonical_master_primary_id,False,Meta Platforms Inc,,30303M102,,NASDAQ,equity,True
+AVGO,AVGO,CUSIP:11135F101,CUSIP,,3.509974,0.035099740000000004,resolved_by_primary_id,canonical_master_primary_id,False,Broadcom Inc,,11135F101,,NASDAQ,equity,True
+GOOG,GOOG,CUSIP:02079K107,CUSIP,,3.354997,0.03354997,resolved_by_primary_id,canonical_master_primary_id,False,Alphabet Inc Class C,,02079K107,,NASDAQ,equity,True
+TSLA,TSLA,CUSIP:88160R101,CUSIP,,3.345655,0.03345655,resolved_by_primary_id,canonical_master_primary_id,False,Tesla Inc,,88160R101,,NASDAQ,equity,True
+WMT,WMT,CUSIP:931142103,CUSIP,,3.047351,0.03047351,resolved_by_primary_id,canonical_master_primary_id,False,Walmart Inc,,931142103,,NASDAQ,equity,True
+MU,MU,CUSIP:595112103,CUSIP,,2.88527,0.0288527,resolved_by_primary_id,canonical_master_primary_id,False,Micron Technology Inc,,595112103,,NASDAQ,equity,True
+AMD,AMD,CUSIP:007903107,CUSIP,,2.666275,0.026662750000000002,resolved_by_primary_id,canonical_master_primary_id,False,Advanced Micro Devices Inc,,007903107,,NASDAQ,equity,True
+COST,COST,CUSIP:22160K105,CUSIP,,2.164884,0.02164884,resolved_by_primary_id,canonical_master_primary_id,False,Costco Wholesale Corp,,22160K105,,NASDAQ,equity,True
+INTC,INTC,CUSIP:458140100,CUSIP,,2.074654,0.02074654,resolved_by_primary_id,canonical_master_primary_id,False,Intel Corp,,458140100,,NASDAQ,equity,True
+NFLX,NFLX,CUSIP:64110L106,CUSIP,,1.885303,0.01885303,resolved_by_primary_id,canonical_master_primary_id,False,Netflix Inc,,64110L106,,NASDAQ,equity,True
+CSCO,CSCO,CUSIP:17275R102,CUSIP,,1.703695,0.01703695,resolved_by_primary_id,canonical_master_primary_id,False,Cisco Systems Inc,,17275R102,,NASDAQ,equity,True
+PLTR,PLTR,CUSIP:69608A108,CUSIP,,1.602493,0.01602493,resolved_by_primary_id,canonical_master_primary_id,False,Palantir Technologies Inc,,69608A108,,NASDAQ,equity,True
+LRCX,LRCX,CUSIP:512807306,CUSIP,,1.583479,0.01583479,resolved_by_primary_id,canonical_master_primary_id,False,Lam Research Corp,,512807306,,NASDAQ,equity,True
+AMAT,AMAT,CUSIP:038222105,CUSIP,,1.5702,0.015702,resolved_by_primary_id,canonical_master_primary_id,False,Applied Materials Inc,,038222105,,NASDAQ,equity,True
+KLAC,KLAC,CUSIP:482480100,CUSIP,,1.217077,0.01217077,resolved_by_primary_id,canonical_master_primary_id,False,KLA Corp,,482480100,,NASDAQ,equity,True
+TXN,TXN,CUSIP:882508104,CUSIP,,1.195287,0.011952869999999999,resolved_by_primary_id,canonical_master_primary_id,False,Texas Instruments Inc,,882508104,,NASDAQ,equity,True
+LIN,LIN,CUSIP:G54950103,CUSIP,,1.15665,0.0115665,resolved_by_primary_id,canonical_master_primary_id,False,Linde PLC,,G54950103,,NASDAQ,equity,True
+PEP,PEP,CUSIP:713448108,CUSIP,,1.029206,0.01029206,resolved_by_primary_id,canonical_master_primary_id,False,PepsiCo Inc,,713448108,,NASDAQ,equity,True
+TMUS,TMUS,CUSIP:872590104,CUSIP,,0.984072,0.009840719999999999,resolved_by_primary_id,canonical_master_primary_id,False,T-Mobile US Inc,,872590104,,NASDAQ,equity,True
+ADI,ADI,CUSIP:032654105,CUSIP,,0.936666,0.00936666,resolved_by_primary_id,canonical_master_primary_id,False,Analog Devices Inc,,032654105,,NASDAQ,equity,True
+AMGN,AMGN,CUSIP:031162100,CUSIP,,0.896178,0.00896178,resolved_by_primary_id,canonical_master_primary_id,False,Amgen Inc,,031162100,,NASDAQ,equity,True
+ISRG,ISRG,CUSIP:46120E602,CUSIP,,0.817417,0.00817417,resolved_by_primary_id,canonical_master_primary_id,False,Intuitive Surgical Inc,,46120E602,,NASDAQ,equity,True
+QCOM,QCOM,CUSIP:747525103,CUSIP,,0.78352,0.0078352,resolved_by_primary_id,canonical_master_primary_id,False,QUALCOMM Inc,,747525103,,NASDAQ,equity,True
+GILD,GILD,CUSIP:375558103,CUSIP,,0.775037,0.0077503699999999995,resolved_by_primary_id,canonical_master_primary_id,False,Gilead Sciences Inc,,375558103,,NASDAQ,equity,True
+SNDK,SNDK,CUSIP:80004C200,CUSIP,,0.771954,0.00771954,resolved_by_primary_id,canonical_master_primary_id,False,Sandisk Corp/DE,,80004C200,,NASDAQ,equity,True
+SHOP,SHOP,CUSIP:82509L107,CUSIP,,0.744343,0.00744343,resolved_by_primary_id,canonical_master_primary_id,False,Shopify Inc,,82509L107,,NASDAQ,equity,True
+PANW,PANW,CUSIP:697435105,CUSIP,,0.729366,0.0072936599999999996,resolved_by_primary_id,canonical_master_primary_id,False,Palo Alto Networks Inc,,697435105,,NASDAQ,equity,True
+APP,APP,CUSIP:03831W108,CUSIP,,0.690738,0.006907379999999999,resolved_by_primary_id,canonical_master_primary_id,False,AppLovin Corp,,03831W108,,NASDAQ,equity,True
+BKNG,BKNG,CUSIP:09857L108,CUSIP,,0.686948,0.00686948,resolved_by_primary_id,canonical_master_primary_id,False,Booking Holdings Inc,,09857L108,,NASDAQ,equity,True
+MRVL,MRVL,CUSIP:573874104,CUSIP,,0.673833,0.00673833,resolved_by_primary_id,canonical_master_primary_id,False,Marvell Technology Inc,,573874104,,NASDAQ,equity,True
+WDC,WDC,CUSIP:958102105,CUSIP,,0.663963,0.00663963,resolved_by_primary_id,canonical_master_primary_id,False,Western Digital Corp,,958102105,,NASDAQ,equity,True
+HON,HON,CUSIP:438516106,CUSIP,,0.658743,0.00658743,resolved_by_primary_id,canonical_master_primary_id,False,Honeywell International Inc,,438516106,,NASDAQ,equity,True
+STX,STX,CUSIP:G7997R103,CUSIP,,0.635022,0.00635022,resolved_by_primary_id,canonical_master_primary_id,False,Seagate Technology Holdings PLC,,G7997R103,,NASDAQ,equity,True
+ASML,ASML,CUSIP:N07059210,CUSIP,,0.616715,0.00616715,resolved_by_primary_id,canonical_master_primary_id,False,ASML Holding NV,,N07059210,,NASDAQ,equity,True
+CRWD,CRWD,CUSIP:22788C105,CUSIP,,0.560083,0.00560083,resolved_by_primary_id,canonical_master_primary_id,False,Crowdstrike Holdings Inc,,22788C105,,NASDAQ,equity,True
+CEG,CEG,CUSIP:21037T109,CUSIP,,0.557548,0.005575480000000001,resolved_by_primary_id,canonical_master_primary_id,False,Constellation Energy Corp,,21037T109,,NASDAQ,equity,True
+SBUX,SBUX,CUSIP:855244109,CUSIP,,0.545029,0.00545029,resolved_by_primary_id,canonical_master_primary_id,False,Starbucks Corp,,855244109,,NASDAQ,equity,True
+VRTX,VRTX,CUSIP:92532F100,CUSIP,,0.528879,0.00528879,resolved_by_primary_id,canonical_master_primary_id,False,Vertex Pharmaceuticals Inc,,92532F100,,NASDAQ,equity,True
+INTU,INTU,CUSIP:461202103,CUSIP,,0.526977,0.00526977,resolved_by_primary_id,canonical_master_primary_id,False,Intuit Inc,,461202103,,NASDAQ,equity,True
+CMCSA,CMCSA,CUSIP:20030N101,CUSIP,,0.48243,0.0048243,resolved_by_primary_id,canonical_master_primary_id,False,Comcast Corp,,20030N101,,NASDAQ,equity,True
+ADBE,ADBE,CUSIP:00724F101,CUSIP,,0.476734,0.00476734,resolved_by_primary_id,canonical_master_primary_id,False,Adobe Inc,,00724F101,,NASDAQ,equity,True
+MAR,MAR,CUSIP:571903202,CUSIP,,0.467061,0.00467061,resolved_by_primary_id,canonical_master_primary_id,False,Marriott International Inc/MD,,571903202,,NASDAQ,equity,True
+SNPS,SNPS,CUSIP:871607107,CUSIP,,0.466715,0.00466715,resolved_by_primary_id,canonical_master_primary_id,False,Synopsys Inc,,871607107,,NASDAQ,equity,True
+MELI,MELI,CUSIP:58733R102,CUSIP,,0.455708,0.00455708,resolved_by_primary_id,canonical_master_primary_id,False,MercadoLibre Inc,,58733R102,,NASDAQ,equity,True
+CDNS,CDNS,CUSIP:127387108,CUSIP,,0.454082,0.00454082,resolved_by_primary_id,canonical_master_primary_id,False,Cadence Design Systems Inc,,127387108,,NASDAQ,equity,True
+CSX,CSX,CUSIP:126408103,CUSIP,,0.413125,0.00413125,resolved_by_primary_id,canonical_master_primary_id,False,CSX Corp,,126408103,,NASDAQ,equity,True
+ADP,ADP,CUSIP:053015103,CUSIP,,0.388093,0.0038809300000000003,resolved_by_primary_id,canonical_master_primary_id,False,Automatic Data Processing Inc,,053015103,,NASDAQ,equity,True
+MPWR,MPWR,CUSIP:609839105,CUSIP,,0.381071,0.00381071,resolved_by_primary_id,canonical_master_primary_id,False,Monolithic Power Systems Inc,,609839105,,NASDAQ,equity,True
+REGN,REGN,CUSIP:75886F107,CUSIP,,0.378001,0.00378001,resolved_by_primary_id,canonical_master_primary_id,False,Regeneron Pharmaceuticals Inc,,75886F107,,NASDAQ,equity,True
+ORLY,ORLY,CUSIP:67103H107,CUSIP,,0.376865,0.00376865,resolved_by_primary_id,canonical_master_primary_id,False,O'Reilly Automotive Inc,,67103H107,,NASDAQ,equity,True
+MNST,MNST,CUSIP:61174X109,CUSIP,,0.367453,0.0036745299999999996,resolved_by_primary_id,canonical_master_primary_id,False,Monster Beverage Corp,,61174X109,,NASDAQ,equity,True
+MDLZ,MDLZ,CUSIP:609207105,CUSIP,,0.3597,0.0035970000000000004,resolved_by_primary_id,canonical_master_primary_id,False,Mondelez International Inc,,609207105,,NASDAQ,equity,True
+ROST,ROST,CUSIP:778296103,CUSIP,,0.357501,0.00357501,resolved_by_primary_id,canonical_master_primary_id,False,Ross Stores Inc,,778296103,,NASDAQ,equity,True
+AEP,AEP,CUSIP:025537101,CUSIP,,0.357015,0.0035701500000000002,resolved_by_primary_id,canonical_master_primary_id,False,American Electric Power Co Inc,,025537101,,NASDAQ,equity,True
+DASH,DASH,CUSIP:25809K105,CUSIP,,0.348732,0.00348732,resolved_by_primary_id,canonical_master_primary_id,False,DoorDash Inc,,25809K105,,NASDAQ,equity,True
+CTAS,CTAS,CUSIP:172908105,CUSIP,,0.34012,0.0034011999999999996,resolved_by_primary_id,canonical_master_primary_id,False,Cintas Corp,,172908105,,NASDAQ,equity,True
+BKR,BKR,CUSIP:05722G100,CUSIP,,0.330242,0.00330242,resolved_by_primary_id,canonical_master_primary_id,False,Baker Hughes Co,,05722G100,,NASDAQ,equity,True
+PCAR,PCAR,CUSIP:693718108,CUSIP,,0.326909,0.00326909,resolved_by_primary_id,canonical_master_primary_id,False,PACCAR Inc,,693718108,,NASDAQ,equity,True
+WBD,WBD,CUSIP:934423104,CUSIP,,0.325043,0.0032504300000000003,resolved_by_primary_id,canonical_master_primary_id,False,Warner Bros Discovery Inc,,934423104,,NASDAQ,equity,True
+PDD,PDD,CUSIP:722304102,CUSIP,,0.321422,0.00321422,resolved_by_primary_id,canonical_master_primary_id,False,PDD Holdings Inc,,722304102,,NASDAQ,equity,True
+FTNT,FTNT,CUSIP:34959E109,CUSIP,,0.309784,0.00309784,resolved_by_primary_id,canonical_master_primary_id,False,Fortinet Inc,,34959E109,,NASDAQ,equity,True
+NXPI,NXPI,CUSIP:N6596X109,CUSIP,,0.292514,0.00292514,resolved_by_primary_id,canonical_master_primary_id,False,NXP Semiconductors NV,,N6596X109,,NASDAQ,equity,True
+ABNB,ABNB,CUSIP:009066101,CUSIP,,0.291994,0.0029199399999999998,resolved_by_primary_id,canonical_master_primary_id,False,Airbnb Inc,,009066101,,NASDAQ,equity,True
+FANG,FANG,CUSIP:25278X109,CUSIP,,0.270769,0.00270769,resolved_by_primary_id,canonical_master_primary_id,False,Diamondback Energy Inc,,25278X109,,NASDAQ,equity,True
+MSTR,MSTR,CUSIP:594972408,CUSIP,,0.259733,0.00259733,resolved_by_primary_id,canonical_master_primary_id,False,Strategy Inc,,594972408,,NASDAQ,equity,True
+FAST,FAST,CUSIP:311900104,CUSIP,,0.254106,0.00254106,resolved_by_primary_id,canonical_master_primary_id,False,Fastenal Co,,311900104,,NASDAQ,equity,True
+EA,EA,CUSIP:285512109,CUSIP,,0.247595,0.00247595,resolved_by_primary_id,canonical_master_primary_id,False,Electronic Arts Inc,,285512109,,NASDAQ,equity,True
+ADSK,ADSK,CUSIP:052769106,CUSIP,,0.243502,0.00243502,resolved_by_primary_id,canonical_master_primary_id,False,Autodesk Inc,,052769106,,NASDAQ,equity,True
+XEL,XEL,CUSIP:98389B100,CUSIP,,0.242112,0.00242112,resolved_by_primary_id,canonical_master_primary_id,False,Xcel Energy Inc,,98389B100,,NASDAQ,equity,True
+FER,FER,CUSIP:N3168P101,CUSIP,,0.238103,0.00238103,resolved_by_primary_id,canonical_master_primary_id,False,Ferrovial SE,,N3168P101,,NASDAQ,equity,True
+EXC,EXC,CUSIP:30161N101,CUSIP,,0.232898,0.00232898,resolved_by_primary_id,canonical_master_primary_id,False,Exelon Corp,,30161N101,,NASDAQ,equity,True
+MCHP,MCHP,CUSIP:595017104,CUSIP,,0.229652,0.00229652,resolved_by_primary_id,canonical_master_primary_id,False,Microchip Technology Inc,,595017104,,NASDAQ,equity,True
+ODFL,ODFL,CUSIP:679580100,CUSIP,,0.224628,0.00224628,resolved_by_primary_id,canonical_master_primary_id,False,Old Dominion Freight Line Inc,,679580100,,NASDAQ,equity,True
+PYPL,PYPL,CUSIP:70450Y103,CUSIP,,0.22393,0.0022393,resolved_by_primary_id,canonical_master_primary_id,False,PayPal Holdings Inc,,70450Y103,,NASDAQ,equity,True
+IDXX,IDXX,CUSIP:45168D104,CUSIP,,0.22373,0.0022373000000000002,resolved_by_primary_id,canonical_master_primary_id,False,IDEXX Laboratories Inc,,45168D104,,NASDAQ,equity,True
+CCEP,CCEP,CUSIP:G25839104,CUSIP,,0.215301,0.00215301,resolved_by_primary_id,canonical_master_primary_id,False,Coca-Cola Europacific Partners PLC,,G25839104,,NASDAQ,equity,True
+DDOG,DDOG,CUSIP:23804L103,CUSIP,,0.212959,0.00212959,resolved_by_primary_id,canonical_master_primary_id,False,Datadog Inc,,23804L103,,NASDAQ,equity,True
+ALNY,ALNY,CUSIP:02043Q107,CUSIP,,0.199957,0.00199957,resolved_by_primary_id,canonical_master_primary_id,False,Alnylam Pharmaceuticals Inc,,02043Q107,,NASDAQ,equity,True
+TRI,TRI,CUSIP:884903808,CUSIP,,0.193568,0.00193568,resolved_by_primary_id,canonical_master_primary_id,False,Thomson Reuters Corp,,884903808,,NASDAQ,equity,True
+TTWO,TTWO,CUSIP:874054109,CUSIP,,0.19345,0.0019345,resolved_by_primary_id,canonical_master_primary_id,False,Take-Two Interactive Software Inc,,874054109,,NASDAQ,equity,True
+KDP,KDP,CUSIP:49271V100,CUSIP,,0.186911,0.00186911,resolved_by_primary_id,canonical_master_primary_id,False,Keurig Dr Pepper Inc,,49271V100,,NASDAQ,equity,True
+ROP,ROP,CUSIP:776696106,CUSIP,,0.177286,0.00177286,resolved_by_primary_id,canonical_master_primary_id,False,Roper Technologies Inc,,776696106,,NASDAQ,equity,True
+AXON,AXON,CUSIP:05464C101,CUSIP,,0.158181,0.00158181,resolved_by_primary_id,canonical_master_primary_id,False,Axon Enterprise Inc,,05464C101,,NASDAQ,equity,True
+PAYX,PAYX,CUSIP:704326107,CUSIP,,0.157761,0.0015776100000000001,resolved_by_primary_id,canonical_master_primary_id,False,Paychex Inc,,704326107,,NASDAQ,equity,True
+GEHC,GEHC,CUSIP:36266G107,CUSIP,,0.157054,0.00157054,resolved_by_primary_id,canonical_master_primary_id,False,GE HealthCare Technologies Inc,,36266G107,,NASDAQ,equity,True
+CPRT,CPRT,CUSIP:217204106,CUSIP,,0.157012,0.0015701200000000002,resolved_by_primary_id,canonical_master_primary_id,False,Copart Inc,,217204106,,NASDAQ,equity,True
+ARM,ARM,CUSIP:042068205,CUSIP,,0.147329,0.00147329,resolved_by_primary_id,canonical_master_primary_id,False,ARM Holdings PLC,,042068205,,NASDAQ,equity,True
+INSM,INSM,CUSIP:457669307,CUSIP,,0.143242,0.00143242,resolved_by_primary_id,canonical_master_primary_id,False,Insmed Inc,,457669307,,NASDAQ,equity,True
+CTSH,CTSH,CUSIP:192446102,CUSIP,,0.127681,0.00127681,resolved_by_primary_id,canonical_master_primary_id,False,Cognizant Technology Solutions Corp,,192446102,,NASDAQ,equity,True
+KHC,KHC,CUSIP:500754106,CUSIP,,0.126807,0.00126807,resolved_by_primary_id,canonical_master_primary_id,False,Kraft Heinz Co/The,,500754106,,NASDAQ,equity,True
+WDAY,WDAY,CUSIP:98138H101,CUSIP,,0.122652,0.00122652,resolved_by_primary_id,canonical_master_primary_id,False,Workday Inc,,98138H101,,NASDAQ,equity,True
+VRSK,VRSK,CUSIP:92345Y106,CUSIP,,0.117904,0.00117904,resolved_by_primary_id,canonical_master_primary_id,False,Verisk Analytics Inc,,92345Y106,,NASDAQ,equity,True
+DXCM,DXCM,CUSIP:252131107,CUSIP,,0.115502,0.0011550199999999999,resolved_by_primary_id,canonical_master_primary_id,False,Dexcom Inc,,252131107,,NASDAQ,equity,True
+CHTR,CHTR,CUSIP:16119P108,CUSIP,,0.108056,0.00108056,resolved_by_primary_id,canonical_master_primary_id,False,Charter Communications Inc,,16119P108,,NASDAQ,equity,True
+ZS,ZS,CUSIP:98980G102,CUSIP,,0.105382,0.00105382,resolved_by_primary_id,canonical_master_primary_id,False,Zscaler Inc,,98980G102,,NASDAQ,equity,True
+USD,USD,CUSIP:CASHUSD00,CUSIP,,0.09499,0.0009499,resolved_by_primary_id,canonical_master_primary_id,False,CASH &amp; EQUIVALENTS,,CASHUSD00,,NASDAQ,equity,True
+NQM6,NQM6,CUSIP:NQM6,CUSIP,,0.084955,0.00084955,resolved_by_primary_id,canonical_master_primary_id,False,CME E-Mini NASDAQ 100 Index Future,,NQM6,,NASDAQ,equity,True
+CSGP,CSGP,CUSIP:22160N109,CUSIP,,0.074348,0.0007434799999999999,resolved_by_primary_id,canonical_master_primary_id,False,CoStar Group Inc,,22160N109,,NASDAQ,equity,True
+,NONE,CUSIP:FUTPLGCSH,CUSIP,,-0.000489,-4.89e-06,resolved_by_primary_id,canonical_master_primary_id,False,CASH COLLATERAL,,FUTPLGCSH,,NASDAQ,equity,True
+NQM6_,NQM6_,CUSIP:None,CUSIP,,-0.084955,-0.00084955,resolved_by_exact_symbol_map,canonical_master_symbol_exchange_share_class,False,CME E-Mini NASDAQ 100 Index Future,,,,NASDAQ,equity,True

@@ -36,6 +36,10 @@ _REQUIRED_SUMMARY_FIELDS = {
     "strict_contracts_satisfied",
     "freshness",
     "interpretability",
+    "backfill_mode",
+    "micro_state_frozen",
+    "contract_source",
+    "strict_gate_passed",
 }
 
 
@@ -71,6 +75,13 @@ class CycleSnapshot:
     signal_valid_but_not_executable: bool | None
     execution_block_reason: str | None
     strict_contracts_satisfied: bool | None
+    backfill_mode: str | None
+    micro_state_frozen: bool | None
+    micro_envelope_internal_state: float | None
+    micro_breaker_internal_state: str | None
+    micro_rho_update_state: str | None
+    contract_source: str | None
+    strict_gate_passed: bool | None
     freshness: list[dict[str, Any]]
     interpretability: dict[str, Any] | None
 
@@ -166,6 +177,13 @@ def build_cycle_snapshot(
         ),
         execution_block_reason=_maybe_str(live_summary.get("execution_block_reason")),
         strict_contracts_satisfied=_maybe_bool(live_summary.get("strict_contracts_satisfied")),
+        backfill_mode=_maybe_str(live_summary.get("backfill_mode")),
+        micro_state_frozen=_maybe_bool(live_summary.get("micro_state_frozen")),
+        micro_envelope_internal_state=_maybe_float(live_summary.get("micro_envelope_internal_state")),
+        micro_breaker_internal_state=_maybe_str(live_summary.get("micro_breaker_internal_state")),
+        micro_rho_update_state=_maybe_str(live_summary.get("micro_rho_update_state")),
+        contract_source=_maybe_str(live_summary.get("contract_source")),
+        strict_gate_passed=_maybe_bool(live_summary.get("strict_gate_passed")),
         freshness=_normalize_freshness(live_summary.get("freshness")),
         interpretability=interpretability or None,
     )
@@ -226,6 +244,19 @@ def render_weekly_cycle_report(snapshot: CycleSnapshot) -> str:
             "- strict_contracts_satisfied: "
             f"{_scalar_to_text(snapshot.strict_contracts_satisfied)}"
         ),
+        f"- backfill_mode: {_scalar_to_text(snapshot.backfill_mode)}",
+        f"- micro_state_frozen: {_scalar_to_text(snapshot.micro_state_frozen)}",
+        (
+            "- micro_envelope_internal_state: "
+            f"{_scalar_to_text(snapshot.micro_envelope_internal_state)}"
+        ),
+        (
+            "- micro_breaker_internal_state: "
+            f"{_scalar_to_text(snapshot.micro_breaker_internal_state)}"
+        ),
+        f"- micro_rho_update_state: {_scalar_to_text(snapshot.micro_rho_update_state)}",
+        f"- contract_source: {_scalar_to_text(snapshot.contract_source)}",
+        f"- strict_gate_passed: {_scalar_to_text(snapshot.strict_gate_passed)}",
         f"- degraded_reason: {_scalar_to_text(snapshot.degraded_reason)}",
         f"- execution_block_reason: {_scalar_to_text(snapshot.execution_block_reason)}",
         "",

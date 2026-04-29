@@ -17,6 +17,7 @@ As-of semantics:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,7 @@ REQUIRED_MASTER_COLUMNS = (
     "active_from",
     "active_to",
     "source",
+    "source_version",
 )
 
 REQUIRED_NORMALIZED_COLUMNS = (
@@ -116,57 +118,113 @@ def _first_match(frame: pd.DataFrame) -> pd.Series | None:
     return frame.iloc[0]
 
 
-def _resolve_by_primary_id(row: pd.Series, master: pd.DataFrame) -> pd.Series | None:
+def _parse_date(value: Any) -> date | None:
+    text = _clean(value)
+    if not text:
+        return None
+    return pd.Timestamp(text).date()
+
+
+def _active_in_asof(row: pd.Series, asof: date | None) -> bool:
+    if asof is None:
+        return True
+    active_from = _parse_date(row.get("active_from"))
+    active_to = _parse_date(row.get("active_to"))
+    if active_from is not None and asof < active_from:
+        return False
+    if active_to is not None and asof > active_to:
+        return False
+    return True
+
+
+def _filter_active(frame: pd.DataFrame, asof: date | None) -> pd.DataFrame:
+    if asof is None or frame.empty:
+        return frame
+    mask = frame.apply(lambda row: _active_in_asof(row, asof), axis=1)
+    return frame.loc[mask]
+
+
+def _resolve_by_primary_id(row: pd.Series, master: pd.DataFrame, asof: date | None) -> pd.Series | None:
     for raw_col, master_col in (("isin", "isin"), ("cusip", "cusip"), ("sedol", "sedol"), ("figi", "figi")):
         if raw_col not in row.index or master_col not in master.columns:
             continue
         value = _clean_upper(row.get(raw_col))
         if not value:
             continue
-        match = master[master[master_col].map(_clean_upper) == value]
+        match = _filter_active(master[master[master_col].map(_clean_upper) == value], asof)
         if not match.empty:
             return match.iloc[0]
     return None
 
 
-def _resolve_by_instrument_id(row: pd.Series, master: pd.DataFrame) -> pd.Series | None:
+def _resolve_by_instrument_id(row: pd.Series, master: pd.DataFrame, asof: date | None) -> pd.Series | None:
     value = _clean(row.get("instrument_id", ""))
     if not value:
         return None
-    return _first_match(master[master["instrument_id"].map(_clean) == value])
+    return _first_match(_filter_active(master[master["instrument_id"].map(_clean) == value], asof))
 
 
-def _resolve_by_symbol_exchange_share_class(row: pd.Series, master: pd.DataFrame) -> pd.Series | None:
+def _resolve_by_symbol_exchange_share_class(
+    row: pd.Series, master: pd.DataFrame, asof: date | None
+) -> pd.Series | None:
     symbol = _clean_upper(row.get("raw_symbol", row.get("symbol", "")))
     exchange = _clean_upper(row.get("exchange", ""))
     share_class = _clean_upper(row.get("share_class", ""))
     if not symbol or not exchange:
         return None
-    candidate = master[
+    candidate = _filter_active(master[
         (master["canonical_symbol"].map(_clean_upper) == symbol)
         & (master["primary_listing_exchange"].map(_clean_upper) == exchange)
-    ]
+    ], asof)
     if share_class:
         candidate = candidate[candidate["share_class"].map(_clean_upper) == share_class]
     return _first_match(candidate)
 
 
-def _resolve_from_map(row: pd.Series, mapping: pd.DataFrame | None) -> pd.Series | None:
+def _resolve_from_map(
+    row: pd.Series,
+    mapping: pd.DataFrame | None,
+    *,
+    require_active_override: bool = False,
+    asof_week_end: str | None = None,
+) -> pd.Series | None:
     if mapping is None or mapping.empty:
         return None
     symbol = _clean_upper(row.get("raw_symbol", row.get("symbol", "")))
     exchange = _clean_upper(row.get("exchange", ""))
     share_class = _clean_upper(row.get("share_class", ""))
-    candidate = mapping[mapping["raw_symbol"].map(_clean_upper) == symbol]
-    if "exchange" in candidate.columns and exchange:
-        candidate = candidate[candidate["exchange"].map(_clean_upper) == exchange]
+    raw_symbol_col = "raw_symbol" if "raw_symbol" in mapping.columns else "symbol"
+    exchange_col = "raw_exchange" if "raw_exchange" in mapping.columns else (
+        "exchange" if "exchange" in mapping.columns else None
+    )
+    candidate = mapping[mapping[raw_symbol_col].map(_clean_upper) == symbol]
+    if exchange_col is not None and exchange:
+        candidate = candidate[candidate[exchange_col].map(_clean_upper) == exchange]
     if "share_class" in candidate.columns and share_class:
         candidate = candidate[candidate["share_class"].map(_clean_upper) == share_class]
+    if asof_week_end and "effective_from" in candidate.columns:
+        asof = pd.Timestamp(asof_week_end).date()
+        effective_from = pd.to_datetime(candidate["effective_from"], errors="coerce").dt.date
+        effective_to = pd.to_datetime(
+            candidate.get("effective_to", pd.Series([""] * len(candidate))), errors="coerce"
+        ).dt.date
+        candidate = candidate[(effective_from.isna() | (effective_from <= asof))]
+        candidate = candidate[(effective_to.isna() | (effective_to >= asof))]
+    if require_active_override:
+        if "active" in candidate.columns:
+            active_mask = candidate["active"].astype(str).str.lower().isin({"1", "true", "yes"})
+            candidate = candidate[active_mask]
+        if "source_evidence" in candidate.columns:
+            candidate = candidate[candidate["source_evidence"].map(_clean).ne("")]
+        if asof_week_end and "week_end" in candidate.columns:
+            candidate = candidate[candidate["week_end"].map(_clean) == asof_week_end]
     return _first_match(candidate)
 
 
-def _master_by_instrument_id(master: pd.DataFrame, instrument_id: str) -> pd.Series | None:
-    return _first_match(master[master["instrument_id"].map(_clean) == _clean(instrument_id)])
+def _master_by_instrument_id(master: pd.DataFrame, instrument_id: str, asof: date | None) -> pd.Series | None:
+    return _first_match(
+        _filter_active(master[master["instrument_id"].map(_clean) == _clean(instrument_id)], asof)
+    )
 
 
 def _resolved_row(
@@ -229,6 +287,7 @@ def normalize_holdings_namespace(
     share_class_map: pd.DataFrame | None = None,
     override_ledger: pd.DataFrame | None = None,
     unresolved_block_threshold: float = 0.01,
+    asof_week_end: str | None = None,
 ) -> tuple[pd.DataFrame, NormalizationSummary]:
     """Normalize official holdings rows into the canonical instrument namespace."""
 
@@ -241,6 +300,8 @@ def normalize_holdings_namespace(
             raise NamespaceNormalizationError(f"raw holdings missing column: {col}")
     namespace_hash = canonical_master_hash(canonical_master)
 
+    asof = pd.Timestamp(asof_week_end).date() if asof_week_end else None
+
     raw = raw_holdings.copy()
     raw["raw_weight"] = pd.to_numeric(raw[weight_col], errors="coerce")
     raw["normalized_weight"] = normalize_weight_units(raw["raw_weight"])
@@ -248,7 +309,7 @@ def normalize_holdings_namespace(
     normalized_rows: list[dict[str, Any]] = []
     for _, row in raw.iterrows():
         normalized_weight = float(row["normalized_weight"])
-        master_row = _resolve_by_primary_id(row, canonical_master)
+        master_row = _resolve_by_primary_id(row, canonical_master, asof)
         if master_row is not None:
             normalized_rows.append(
                 _resolved_row(
@@ -262,7 +323,7 @@ def normalize_holdings_namespace(
             )
             continue
 
-        master_row = _resolve_by_instrument_id(row, canonical_master)
+        master_row = _resolve_by_instrument_id(row, canonical_master, asof)
         if master_row is not None:
             normalized_rows.append(
                 _resolved_row(
@@ -276,7 +337,7 @@ def normalize_holdings_namespace(
             )
             continue
 
-        master_row = _resolve_by_symbol_exchange_share_class(row, canonical_master)
+        master_row = _resolve_by_symbol_exchange_share_class(row, canonical_master, asof)
         if master_row is not None:
             normalized_rows.append(
                 _resolved_row(
@@ -290,9 +351,11 @@ def normalize_holdings_namespace(
             )
             continue
 
-        map_row = _resolve_from_map(row, share_class_map)
+        map_row = _resolve_from_map(row, share_class_map, asof_week_end=asof_week_end)
         if map_row is not None:
-            master_row = _master_by_instrument_id(canonical_master, str(map_row["instrument_id"]))
+            master_row = _master_by_instrument_id(
+                canonical_master, str(map_row["instrument_id"]), asof
+            )
             if master_row is not None:
                 normalized_rows.append(
                     _resolved_row(
@@ -306,9 +369,16 @@ def normalize_holdings_namespace(
                 )
                 continue
 
-        map_row = _resolve_from_map(row, override_ledger)
+        map_row = _resolve_from_map(
+            row,
+            override_ledger,
+            require_active_override=True,
+            asof_week_end=asof_week_end,
+        )
         if map_row is not None:
-            master_row = _master_by_instrument_id(canonical_master, str(map_row["instrument_id"]))
+            master_row = _master_by_instrument_id(
+                canonical_master, str(map_row["instrument_id"]), asof
+            )
             if master_row is not None:
                 normalized_rows.append(
                     _resolved_row(

@@ -1,8 +1,8 @@
 generated_at,operational_now,required_week_end,snapshot_week_end,category,alert_level,alert_code,message,runbook_section
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,constituents stale: constituent_store not provided,§2.3
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,weights stale: weight_store not provided,§2.3
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,pit_prices stale: pit_engine not provided,§2.3
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,execution_readiness,block,execution_blocked,constituent_store not provided; weight_store not provided; pit_engine not provided,§3.2
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,signal_validity,block,signal_invalid,signal tuple is incomplete for the required week_end,§3.3
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,data_health,degrade,stale_source_degrade,ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24,§2.3
-2026-04-29T09:50:38.532961Z,2026-04-29T09:50:38.532961Z,2026-04-24,2026-04-24,data_health,warn,late_snapshot_publication,snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z,§2.2
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,constituents stale: constituent_store not provided,§2.3
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,weights stale: weight_store not provided,§2.3
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,data_health,block,stale_source_block,pit_prices stale: pit_engine not provided,§2.3
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,execution_readiness,block,execution_blocked,constituent_store not provided; weight_store not provided; pit_engine not provided,§3.2
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,signal_validity,block,signal_invalid,signal tuple is incomplete for the required week_end,§3.3
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,data_health,degrade,stale_source_degrade,ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24,§2.3
+2026-04-29T10:16:37.337881Z,2026-04-29T10:16:37.337881Z,2026-04-24,2026-04-24,data_health,warn,late_snapshot_publication,snapshot for week_end 2026-04-24 published at 2026-04-29T10:16:27Z after SLA cutoff 2026-04-25T16:00:00Z,§2.2

@@ -25,6 +25,7 @@ def master() -> pd.DataFrame:
                 "active_from": "1980-12-12",
                 "active_to": "",
                 "source": "test_master_v1",
+                "source_version": "v1",
             },
             {
                 "instrument_id": "US5949181045",
@@ -39,6 +40,7 @@ def master() -> pd.DataFrame:
                 "active_from": "1986-03-13",
                 "active_to": "",
                 "source": "test_master_v1",
+                "source_version": "v1",
             },
             {
                 "instrument_id": "US02079K3059",
@@ -53,6 +55,7 @@ def master() -> pd.DataFrame:
                 "active_from": "2004-08-19",
                 "active_to": "",
                 "source": "test_master_v1",
+                "source_version": "v1",
             },
             {
                 "instrument_id": "CASH_USD",
@@ -67,6 +70,7 @@ def master() -> pd.DataFrame:
                 "active_from": "1900-01-01",
                 "active_to": "",
                 "source": "test_master_v1",
+                "source_version": "v1",
             },
         ]
     )
@@ -94,7 +98,16 @@ def test_exact_symbol_exchange_resolves() -> None:
 def test_share_class_map_resolves() -> None:
     raw = pd.DataFrame([{"raw_symbol": "GOOG-A", "exchange": "NASDAQ", "share_class": "A", "raw_weight": 1.0}])
     share_class_map = pd.DataFrame(
-        [{"raw_symbol": "GOOG-A", "exchange": "NASDAQ", "share_class": "A", "instrument_id": "US02079K3059"}]
+        [
+            {
+                "raw_symbol": "GOOG-A",
+                "raw_exchange": "NASDAQ",
+                "share_class": "A",
+                "instrument_id": "US02079K3059",
+                "effective_from": "2004-08-19",
+                "effective_to": "",
+            }
+        ]
     )
 
     normalized, _ = normalize_holdings_namespace(raw, master(), share_class_map=share_class_map)
@@ -114,6 +127,50 @@ def test_override_ledger_resolves_with_override_flag_true() -> None:
     assert normalized.loc[0, "instrument_id"] == "CASH_USD"
     assert normalized.loc[0, "normalization_status"] == "resolved_by_override_ledger"
     assert bool(normalized.loc[0, "normalization_override_flag"]) is True
+
+
+def test_inactive_override_is_ignored() -> None:
+    raw = pd.DataFrame([{"raw_symbol": "US DOLLAR", "exchange": "", "share_class": "", "raw_weight": 1.0}])
+    override_ledger = pd.DataFrame(
+        [
+            {
+                "week_end": "2026-04-24",
+                "raw_symbol": "US DOLLAR",
+                "raw_exchange": "",
+                "share_class": "",
+                "instrument_id": "CASH_USD",
+                "active": False,
+                "source_evidence": "doc",
+            }
+        ]
+    )
+
+    normalized, _ = normalize_holdings_namespace(
+        raw, master(), override_ledger=override_ledger, asof_week_end="2026-04-24"
+    )
+    assert normalized.loc[0, "normalization_status"] == "unresolved"
+
+
+def test_override_without_source_evidence_is_ignored() -> None:
+    raw = pd.DataFrame([{"raw_symbol": "US DOLLAR", "exchange": "", "share_class": "", "raw_weight": 1.0}])
+    override_ledger = pd.DataFrame(
+        [
+            {
+                "week_end": "2026-04-24",
+                "raw_symbol": "US DOLLAR",
+                "raw_exchange": "",
+                "share_class": "",
+                "instrument_id": "CASH_USD",
+                "active": True,
+                "source_evidence": "",
+            }
+        ]
+    )
+
+    normalized, _ = normalize_holdings_namespace(
+        raw, master(), override_ledger=override_ledger, asof_week_end="2026-04-24"
+    )
+    assert normalized.loc[0, "normalization_status"] == "unresolved"
 
 
 def test_unknown_ticker_becomes_unresolved() -> None:

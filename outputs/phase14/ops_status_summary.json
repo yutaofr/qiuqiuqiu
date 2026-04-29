@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-04-29T09:50:38.537147Z",
-  "operational_now": "2026-04-29T05:50:38.537147-04:00",
+  "generated_at": "2026-04-29T10:16:37.342745Z",
+  "operational_now": "2026-04-29T06:16:37.342745-04:00",
   "required_week_end": "2026-04-24",
   "latest_available_week_end": "2026-04-24",
-  "published_at": "2026-04-29T09:50:06Z",
+  "published_at": "2026-04-29T10:16:27Z",
   "operational_sla_cutoff": "SAT 12:00 America/New_York",
   "current_mode": "degraded",
   "current_status": "BLOCK",
@@ -26,7 +26,7 @@
       "weights stale: weight_store not provided",
       "pit_prices stale: pit_engine not provided",
       "ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
-      "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z"
+      "snapshot for week_end 2026-04-24 published at 2026-04-29T10:16:27Z after SLA cutoff 2026-04-25T16:00:00Z"
     ]
   },
   "freshness": {
@@ -41,19 +41,19 @@
     "published_by_sla": false
   },
   "degraded_or_block_reasons": [
-    "controlled block: micro IIR state held",
+    "controlled degraded_backfill: micro IIR state frozen",
     "constituent_store not provided; weight_store not provided; pit_engine not provided",
     "constituents stale: constituent_store not provided",
     "weights stale: weight_store not provided",
     "pit_prices stale: pit_engine not provided",
     "signal tuple is incomplete for the required week_end",
     "ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
-    "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z"
+    "snapshot for week_end 2026-04-24 published at 2026-04-29T10:16:27Z after SLA cutoff 2026-04-25T16:00:00Z"
   ],
   "current_alerts": [
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "data_health",
@@ -63,8 +63,8 @@
       "runbook_section": "\u00a72.3"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "data_health",
@@ -74,8 +74,8 @@
       "runbook_section": "\u00a72.3"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "data_health",
@@ -85,8 +85,8 @@
       "runbook_section": "\u00a72.3"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "execution_readiness",
@@ -96,8 +96,8 @@
       "runbook_section": "\u00a73.2"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "signal_validity",
@@ -107,8 +107,8 @@
       "runbook_section": "\u00a73.3"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "data_health",
@@ -118,14 +118,14 @@
       "runbook_section": "\u00a72.3"
     },
     {
-      "generated_at": "2026-04-29T09:50:38.532961Z",
-      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "generated_at": "2026-04-29T10:16:37.337881Z",
+      "operational_now": "2026-04-29T10:16:37.337881Z",
       "required_week_end": "2026-04-24",
       "snapshot_week_end": "2026-04-24",
       "category": "data_health",
       "alert_level": "warn",
       "alert_code": "late_snapshot_publication",
-      "message": "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z",
+      "message": "snapshot for week_end 2026-04-24 published at 2026-04-29T10:16:27Z after SLA cutoff 2026-04-25T16:00:00Z",
       "runbook_section": "\u00a72.2"
     }
   ],
@@ -137,14 +137,14 @@
     "\u00a73.3"
   ],
   "operator_action": "see docs/OPS_RUNBOOK.md \u00a72.2",
-  "top_reason": "controlled block: micro IIR state held",
+  "top_reason": "controlled degraded_backfill: micro IIR state frozen",
   "controlled_backfill": {
     "week_end": "2026-04-24",
     "asset": "QQQ",
-    "backfill_mode": "block",
+    "backfill_mode": "degraded_backfill",
     "strict_eligible": false,
-    "revision_reason": "namespace_normalization_failure",
-    "validation_reason": "empty_holdings",
-    "decision_reason": "block_official_source_incomplete"
+    "revision_reason": "controlled_backfill_without_pit_proof",
+    "validation_reason": "validation_passed_strict",
+    "decision_reason": "degraded_backfill_without_pit_proof"
   }
 }

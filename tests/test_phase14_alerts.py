@@ -33,6 +33,13 @@ def _write_live_summary(
         "execution_state": execution_state,
         "execution_permitted": execution_state == "execute",
         "signal_valid_but_not_executable": execution_state == "degrade",
+        "backfill_mode": None,
+        "micro_state_frozen": False,
+        "micro_envelope_internal_state": h_t,
+        "micro_breaker_internal_state": "inactive",
+        "micro_rho_update_state": "observed",
+        "contract_source": "stores_strict",
+        "strict_gate_passed": True,
         "degraded_reason": None if execution_state == "execute" else "degraded execution",
         "execution_block_reason": None if execution_state != "block" else "blocked execution",
         "strict_contracts_satisfied": mode == "strict",
@@ -171,4 +178,3 @@ def test_warn_degrade_block_alert_generation(tmp_path: Path) -> None:
 
     levels = set(alerts["alert_level"].tolist())
     assert {"warn", "degrade", "block"}.issubset(levels)
-
