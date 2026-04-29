@@ -123,3 +123,83 @@ def test_missing_sla_cutoff_fails_strict() -> None:
 
     assert result.strict_eligible is False
     assert result.strict_eligibility_reason == "missing_sla_cutoff"
+
+
+def test_trusted_third_party_snapshot_with_exact_hash_before_sla_is_eligible() -> None:
+    result = evaluate_publication_proof(
+        proof(
+            source_url="https://webcache.example/qqq",
+            evidence_class="trusted_third_party_snapshot_at_or_before_sla",
+            third_party_snapshot_url="https://archive.example/snapshot/123",
+            verifier_sha256="abc123",
+            payload_extraction_method="identity_bytes/v1",
+            http_status=None,
+        ),
+        SLA,
+        raw_payload=RAW,
+    )
+
+    assert result.strict_eligible is True
+    assert result.strict_eligibility_reason == "verified_third_party_snapshot_before_sla"
+
+
+def test_trusted_third_party_snapshot_with_canonical_hash_before_sla_is_eligible() -> None:
+    result = evaluate_publication_proof(
+        proof(
+            source_url="https://webcache.example/qqq",
+            content_sha256="not-the-raw-hash",
+            evidence_class="trusted_third_party_snapshot_at_or_before_sla",
+            third_party_snapshot_url="https://archive.example/snapshot/123",
+            canonical_content_sha256="772be1eacd8b93529b37c94ba64fc119e01b20610c75779de32f5c573f501072",
+            canonicalization_method="json_ast_decimal/v1",
+            canonicalization_version="1",
+            verifier_sha256="abc123",
+            payload_extraction_method="identity_bytes/v1",
+            http_status=None,
+        ),
+        SLA,
+        raw_payload=b'{"holdings":[{"ticker":"AAA","weight":0.4}]}',
+    )
+
+    assert result.strict_eligible is True
+    assert result.strict_eligibility_reason == "verified_third_party_snapshot_before_sla"
+
+
+def test_trusted_third_party_snapshot_missing_extraction_binding_fails() -> None:
+    result = evaluate_publication_proof(
+        proof(
+            source_url="https://webcache.example/qqq",
+            evidence_class="trusted_third_party_snapshot_at_or_before_sla",
+            third_party_snapshot_url="https://archive.example/snapshot/123",
+            verifier_sha256=None,
+            payload_extraction_method=None,
+            http_status=None,
+        ),
+        SLA,
+        raw_payload=RAW,
+    )
+
+    assert result.strict_eligible is False
+    assert result.strict_eligibility_reason == "missing_machine_evidence"
+
+
+def test_trusted_third_party_snapshot_with_unknown_canonicalization_fails() -> None:
+    result = evaluate_publication_proof(
+        proof(
+            source_url="https://webcache.example/qqq",
+            content_sha256="not-the-raw-hash",
+            evidence_class="trusted_third_party_snapshot_at_or_before_sla",
+            third_party_snapshot_url="https://archive.example/snapshot/123",
+            canonical_content_sha256="772be1eacd8b93529b37c94ba64fc119e01b20610c75779de32f5c573f501072",
+            canonicalization_method="unknown/v9",
+            canonicalization_version="9",
+            verifier_sha256="abc123",
+            payload_extraction_method="identity_bytes/v1",
+            http_status=None,
+        ),
+        SLA,
+        raw_payload=b'{"holdings":[{"ticker":"AAA","weight":0.4}]}',
+    )
+
+    assert result.strict_eligible is False
+    assert result.strict_eligibility_reason == "missing_machine_evidence"

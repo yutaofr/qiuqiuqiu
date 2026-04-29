@@ -1,0 +1,18 @@
+{
+  "current_content_sha256": "5657dcb46b072ca27805dd0495aae33598fe1ecb7609619fe02b227c45291a1c",
+  "current_evidence_timestamp_utc": "2026-04-29T09:49:17Z",
+  "current_fetched_at_utc": "2026-04-29T09:49:17Z",
+  "current_raw_payload_format": "json",
+  "current_raw_payload_size": 26869,
+  "current_selected_scheme": "degraded_backfill",
+  "current_source_url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/holdings/fund?idType=ticker&interval=monthly&productType=ETF",
+  "current_strict_eligibility_reason": "evidence_after_sla_cutoff",
+  "current_strict_eligible": false,
+  "current_validation_result": "validation_passed_strict",
+  "normalized_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/normalized/qqq_holdings_2026-04-24_normalized.csv",
+  "normalized_rows": 105,
+  "proof_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/captures/invesco_qqq_holdings_2026-04-24_proof.json",
+  "raw_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/captures/invesco_qqq_holdings_2026-04-24_raw.json",
+  "result_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/phase14/controlled_backfill_result_qqq_2026-04-24.json",
+  "week_end": "2026-04-24"
+}

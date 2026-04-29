@@ -24,6 +24,11 @@ from urllib.parse import urlparse
 
 import json
 
+from qqq_cycle.data_contracts.canonical_payload import (
+    CANONICALIZATION_METHOD,
+    compute_canonical_sha256,
+)
+
 
 STRICT_EVIDENCE_CLASSES = frozenset(
     {
@@ -77,8 +82,17 @@ class PublicationProof:
     object_version_id: str | None
     audit_log_sha256: str | None
     third_party_snapshot_url: str | None
-    strict_eligible: bool
-    strict_eligibility_reason: str
+    strict_eligible: bool = False
+    strict_eligibility_reason: str = "missing_machine_evidence"
+    canonical_content_sha256: str | None = None
+    canonicalization_method: str | None = None
+    canonicalization_version: str | None = None
+    payload_extraction_method: str | None = None
+    verifier_sha256: str | None = None
+    raw_payload_hash_match: bool | None = None
+    canonical_payload_hash_match: bool | None = None
+    wrapper_detected: bool | None = None
+    wrapper_removed: bool | None = None
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any]) -> "PublicationProof":
@@ -96,6 +110,15 @@ class PublicationProof:
             object_version_id=value.get("object_version_id"),
             audit_log_sha256=value.get("audit_log_sha256"),
             third_party_snapshot_url=value.get("third_party_snapshot_url"),
+            canonical_content_sha256=value.get("canonical_content_sha256"),
+            canonicalization_method=value.get("canonicalization_method"),
+            canonicalization_version=value.get("canonicalization_version"),
+            payload_extraction_method=value.get("payload_extraction_method"),
+            verifier_sha256=value.get("verifier_sha256"),
+            raw_payload_hash_match=value.get("raw_payload_hash_match"),
+            canonical_payload_hash_match=value.get("canonical_payload_hash_match"),
+            wrapper_detected=value.get("wrapper_detected"),
+            wrapper_removed=value.get("wrapper_removed"),
             strict_eligible=bool(value.get("strict_eligible", False)),
             strict_eligibility_reason=str(
                 value.get("strict_eligibility_reason", "missing_machine_evidence")
@@ -192,7 +215,17 @@ def evaluate_publication_proof(
 
     if not parsed.content_sha256:
         return rejected("missing_machine_evidence")
-    if raw_payload is not None and sha256_bytes(raw_payload) != parsed.content_sha256:
+    raw_hash_match = raw_payload is not None and sha256_bytes(raw_payload) == parsed.content_sha256
+    canonical_hash_match = False
+    if parsed.canonical_content_sha256:
+        if (
+            parsed.canonicalization_method != CANONICALIZATION_METHOD
+            or not parsed.canonicalization_version
+        ):
+            return rejected("missing_machine_evidence")
+        if raw_payload is not None:
+            canonical_hash_match = compute_canonical_sha256(raw_payload) == parsed.canonical_content_sha256
+    if raw_payload is not None and not raw_hash_match and not canonical_hash_match:
         return rejected("hash_mismatch")
 
     evidence_ts = parse_utc_timestamp(parsed.evidence_timestamp_utc)
@@ -211,11 +244,22 @@ def evaluate_publication_proof(
     if parsed.evidence_class == "direct_http_capture_at_or_before_sla":
         if parsed.http_status != 200:
             return rejected("http_status_not_success")
+    elif third_party_proof:
+        if (
+            not parsed.third_party_snapshot_url
+            or not parsed.verifier_sha256
+            or not parsed.payload_extraction_method
+        ):
+            return rejected("missing_machine_evidence")
+        if parsed.wrapper_detected and not parsed.wrapper_removed:
+            return rejected("missing_machine_evidence")
     elif not trusted_immutable_snapshot_exists(parsed):
         return rejected("missing_machine_evidence")
 
     return replace(
         parsed,
+        raw_payload_hash_match=raw_hash_match,
+        canonical_payload_hash_match=canonical_hash_match,
         strict_eligible=True,
         strict_eligibility_reason=reason_for_verified_class(parsed.evidence_class),
     )

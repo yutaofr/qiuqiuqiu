@@ -32,6 +32,7 @@ class AuditInputs:
     normalized_path: Path
     price_namespace_path: Path
     proof_path: Path
+    strict_upgrade_evaluation_path: Path | None
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -190,6 +191,11 @@ def run_audit(inputs: AuditInputs) -> dict[str, Any]:
     no_store_pollution = not store_flags["strict_namespace_polluted"]
 
     proof = _load_json(inputs.proof_path)
+    strict_upgrade = (
+        _load_json(inputs.strict_upgrade_evaluation_path)
+        if inputs.strict_upgrade_evaluation_path and inputs.strict_upgrade_evaluation_path.exists()
+        else {}
+    )
     normalized = pd.read_csv(inputs.normalized_path)
     price_namespace = pd.read_csv(inputs.price_namespace_path)
     validation = validate_normalized_holdings(normalized, price_namespace)
@@ -236,6 +242,17 @@ def run_audit(inputs: AuditInputs) -> dict[str, Any]:
         "ops_status_written": bool(
             artifact_flags["ops_status_json_exists"] and artifact_flags["ops_status_md_exists"]
         ),
+        "strict_upgrade_attempted": bool(strict_upgrade.get("strict_upgrade_attempted", False)),
+        "strict_upgrade_succeeded": bool(strict_upgrade.get("strict_upgrade_succeeded", False)),
+        "candidate_strict_eligible": strict_upgrade.get("candidate_strict_eligible"),
+        "strict_evidence_class": strict_upgrade.get("evidence_class"),
+        "strict_evidence_timestamp_utc": strict_upgrade.get("evidence_timestamp_utc"),
+        "raw_content_sha256_match": strict_upgrade.get("raw_content_sha256_match"),
+        "extracted_payload_hash_match": strict_upgrade.get("extracted_payload_hash_match"),
+        "canonical_hash_match": strict_upgrade.get("canonical_hash_match"),
+        "payload_extraction_method": strict_upgrade.get("payload_extraction_method"),
+        "canonicalization_method": strict_upgrade.get("canonicalization_method"),
+        "canonicalization_version": strict_upgrade.get("canonicalization_version"),
         "required_artifacts_ok": required_ok,
         "artifact_flags": artifact_flags,
         "final_audit_passed": final_pass,
@@ -273,6 +290,11 @@ def main() -> int:
         type=Path,
         default=Path("captures/invesco_qqq_holdings_2026-04-24_proof.json"),
     )
+    parser.add_argument(
+        "--strict-upgrade-evaluation-path",
+        type=Path,
+        default=Path("outputs/phase14/strict_upgrade_evaluation_2026-04-24.json"),
+    )
     args = parser.parse_args()
 
     inputs = AuditInputs(
@@ -288,6 +310,7 @@ def main() -> int:
         normalized_path=args.normalized_path,
         price_namespace_path=args.price_namespace_path,
         proof_path=args.proof_path,
+        strict_upgrade_evaluation_path=args.strict_upgrade_evaluation_path,
     )
     report = run_audit(inputs)
     print(json.dumps(report, indent=2, sort_keys=True))
