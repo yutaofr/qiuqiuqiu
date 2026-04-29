@@ -59,6 +59,13 @@ def _write_stub_command(path: Path, text: str) -> Path:
     return path
 
 
+def _write_env_file(base: Path, *, mode: int, webhook_url: str = "https://discord.example/webhook") -> Path:
+    path = base / ".env"
+    path.write_text(f"DISCORD_WEBHOOK_URL={webhook_url}\n", encoding="utf-8")
+    path.chmod(mode)
+    return path
+
+
 def test_dry_run_does_not_call_gemini_or_discord(tmp_path: Path) -> None:
     _write_phase14_snapshot(tmp_path)
     _write_phase15_summary(tmp_path)
@@ -85,11 +92,9 @@ def test_dry_run_does_not_call_gemini_or_discord(tmp_path: Path) -> None:
         [
             "bash",
             str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
-            "--week-end",
-            "2026-04-24",
             "--dry-run",
-            "--output-dir",
-            str(tmp_path / "weekly"),
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         env=env,
@@ -101,11 +106,37 @@ def test_dry_run_does_not_call_gemini_or_discord(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert not gemini_marker.exists()
     assert not discord_marker.exists()
-    status_path = tmp_path / "weekly" / "2026-04-24" / "run_status.json"
+    status_path = tmp_path / ".temp" / "weekly" / "2026-04-24" / "run_status.json"
     assert status_path.exists()
     status = json.loads(status_path.read_text(encoding="utf-8"))
     assert status["dry_run"] is True
     assert status["success"] is True
+
+
+def test_orchestrator_computes_week_end_when_omitted_with_fake_clock(tmp_path: Path) -> None:
+    _write_phase14_snapshot(tmp_path, week_end="2026-04-24")
+    _write_phase15_summary(tmp_path, week_end="2026-04-24")
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
+            "--dry-run",
+            "--work-root",
+            str(tmp_path),
+            "--now-utc",
+            "2026-04-24T21:00:00Z",
+        ],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    status_path = tmp_path / ".temp" / "weekly" / "2026-04-24" / "run_status.json"
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    assert status["week_end"] == "2026-04-24"
 
 
 def test_resend_requires_reason(tmp_path: Path) -> None:
@@ -116,6 +147,8 @@ def test_resend_requires_reason(tmp_path: Path) -> None:
             "--week-end",
             "2026-04-24",
             "--resend",
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         check=False,
@@ -140,6 +173,8 @@ def test_run_lock_blocks_concurrent_execution(tmp_path: Path) -> None:
             "--week-end",
             "2026-04-24",
             "--dry-run",
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         check=False,
@@ -164,6 +199,8 @@ def test_stale_lock_requires_explicit_recovery_flag(tmp_path: Path) -> None:
             "--week-end",
             "2026-04-24",
             "--dry-run",
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         check=False,
@@ -180,6 +217,8 @@ def test_stale_lock_requires_explicit_recovery_flag(tmp_path: Path) -> None:
             "2026-04-24",
             "--dry-run",
             "--recover-stale-lock",
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         check=False,
@@ -210,6 +249,8 @@ def test_sent_marker_prevents_duplicate_send(tmp_path: Path) -> None:
             str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
             "--week-end",
             "2026-04-24",
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         env=env,
@@ -281,8 +322,8 @@ def test_gemini_failure_emits_fallback_once(tmp_path: Path) -> None:
             str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
             "--week-end",
             "2026-04-24",
-            "--output-dir",
-            str(weekly_root),
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         env=env,
@@ -296,8 +337,8 @@ def test_gemini_failure_emits_fallback_once(tmp_path: Path) -> None:
             str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
             "--week-end",
             "2026-04-24",
-            "--output-dir",
-            str(weekly_root),
+            "--work-root",
+            str(tmp_path),
         ],
         cwd=tmp_path,
         env=env,
@@ -313,3 +354,59 @@ def test_gemini_failure_emits_fallback_once(tmp_path: Path) -> None:
     assert second.returncode != 0
     assert (week_dir / "notified_error_gemini.ok").exists()
     assert request_count.read_text(encoding="utf-8") == "1"
+
+
+def test_env_file_with_insecure_permissions_is_rejected(tmp_path: Path) -> None:
+    _write_env_file(tmp_path, mode=0o644)
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
+            "--week-end",
+            "2026-04-24",
+            "--dry-run",
+            "--work-root",
+            str(tmp_path),
+        ],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "0600" in result.stderr
+
+
+def test_env_file_600_is_accepted(tmp_path: Path) -> None:
+    _write_phase14_snapshot(tmp_path)
+    _write_phase15_summary(tmp_path)
+    _write_env_file(tmp_path, mode=0o600)
+
+    result = subprocess.run(
+        [
+            "bash",
+            str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
+            "--week-end",
+            "2026-04-24",
+            "--dry-run",
+            "--work-root",
+            str(tmp_path),
+        ],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / ".temp" / "weekly" / "2026-04-24" / "run_status.json").exists()
+
+
+def test_launchd_template_has_no_week_end_placeholder() -> None:
+    template = (ROOT / "launchd" / "com.qiuqiuqiu.weekly.plist.template").read_text(encoding="utf-8")
+    assert "__WEEK_END_PLACEHOLDER__" not in template
+    assert "<string>--week-end</string>" not in template
+    assert "<string>/bin/bash</string>" in template
+    assert "<string>/ABSOLUTE/PATH/TO/scripts/run_weekly_orchestration.sh</string>" in template

@@ -10,6 +10,8 @@
 
 8. **Weekly Digest 编排约定：** `scripts/run_weekly_orchestration.sh` 的默认周目录在非 dry-run 时写入 `outputs/weekly/<week_end>`；`--dry-run` 未指定 `--output-dir` 时写入 `.temp/weekly/<week_end>`。`.env` 只能通过 allowlist loader 读取 `DISCORD_WEBHOOK_URL`，不得使用 `source .env`。
 
+9. **Weekly Digest 工作根与权限约定：** `scripts/run_weekly_orchestration.sh` 的默认 `WORK_ROOT` 是 `SCRIPT_ROOT`，不依赖调用者 cwd；测试和高级操作可用 `--work-root PATH` 覆盖。若 `WORK_ROOT/.env` 存在，其文件权限必须严格为 `0600`，否则编排在读取前拒绝执行。
+
    **解决方案：** 在 `RealReplayConfig` 中设置 `hyoas_csv` 字段，指向包含长历史 `BAMLH0A0HYM2` 数据的 CSV 文件。CSV 格式要求：一个日期列（支持 `date`、`day`、`week_end`、`index` 等名称，或默认取第一列），一个数值列（支持 `BAMLH0A0HYM2`、`hyoas`、`hy_oas`、`hy_spread`、`value` 等名称，或默认取第二列）。列名大小写不敏感。建议时间跨度 ≥ 10 年（每日频率），以保证周重采样后有 ≥ 265 个有限 theta 行（建议原始日行 ≥ `MIN_WARMUP_ROWS = 525` 行）。
 
    **为什么不换用其他 HY 利差系列：** 替换为不同的利差序列（如 `BAMLH0A0HYM2EY` 或其他 OAS 变体）会改变 `compute_liquidity_factor()` 在整个历史上的数值结果，违反模型数学冻结约束（FF-2 边界）。`hyoas_csv` 必须包含原始 `BAMLH0A0HYM2` 数据（或经过文档记录的历史拼接版本）。

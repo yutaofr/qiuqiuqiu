@@ -2,9 +2,10 @@
 set -euo pipefail
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WORK_ROOT="$(pwd)"
+WORK_ROOT="$SCRIPT_ROOT"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 WEEK_END=""
+NOW_UTC_OVERRIDE=""
 DRY_RUN=false
 RERUN=false
 RESEND=false
@@ -16,6 +17,14 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --week-end)
       WEEK_END="${2:-}"
+      shift 2
+      ;;
+    --now-utc)
+      NOW_UTC_OVERRIDE="${2:-}"
+      shift 2
+      ;;
+    --work-root)
+      WORK_ROOT="${2:-}"
       shift 2
       ;;
     --dry-run)
@@ -50,14 +59,45 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$WEEK_END" ]]; then
-  echo "--week-end is required" >&2
-  exit 2
+  WEEK_END="$("$PYTHON_BIN" - "${NOW_UTC_OVERRIDE:-${WEEKLY_ORCH_NOW_UTC:-}}" <<'PY'
+from datetime import datetime, timedelta, time, timezone
+from zoneinfo import ZoneInfo
+import sys
+
+raw = sys.argv[1] if len(sys.argv) > 1 else ""
+if raw:
+    now_utc = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+else:
+    now_utc = datetime.now(timezone.utc)
+if now_utc.tzinfo is None:
+    now_utc = now_utc.replace(tzinfo=timezone.utc)
+local = now_utc.astimezone(ZoneInfo("America/New_York"))
+weekday = local.weekday()
+date = local.date()
+if weekday == 4:
+    if local.time() >= time(16, 15):
+        resolved = date
+    else:
+        resolved = date - timedelta(days=7)
+elif weekday > 4:
+    resolved = date - timedelta(days=weekday - 4)
+else:
+    resolved = date - timedelta(days=weekday + 3)
+print(resolved.isoformat())
+PY
+)"
 fi
 
 if $RESEND && [[ -z "$RESEND_REASON" ]]; then
   echo "--resend requires --resend-reason" >&2
   exit 2
 fi
+
+if [[ -z "$WORK_ROOT" ]]; then
+  WORK_ROOT="$SCRIPT_ROOT"
+fi
+WORK_ROOT="$(cd "$WORK_ROOT" && pwd)"
+cd "$WORK_ROOT"
 
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 RUN_DIR="$WORK_ROOT/.temp/weekly/$RUN_ID"
@@ -127,10 +167,16 @@ load_safe_env() {
   local webhook
   webhook="$("$PYTHON_BIN" - "$WORK_ROOT/.env" <<'PY'
 from pathlib import Path
+import os
+import stat
 import sys
 
 allowed = {"DISCORD_WEBHOOK_URL"}
 env_path = Path(sys.argv[1])
+mode = stat.S_IMODE(os.stat(env_path).st_mode)
+if mode != 0o600:
+    print(f"refusing to read {env_path}: permissions must be 0600, got {oct(mode)}", file=sys.stderr)
+    raise SystemExit(1)
 for raw_line in env_path.read_text(encoding="utf-8").splitlines():
     line = raw_line.strip()
     if not line or line.startswith("#") or "=" not in line:
