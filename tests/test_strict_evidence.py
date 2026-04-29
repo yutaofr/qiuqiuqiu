@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import base64
+import pytest
 
 from qqq_cycle.data_contracts.strict_evidence import (
     compute_payload_equivalence,
     detect_snapshot_wrapper,
     extract_original_payload,
+    normalize_wayback_timestamp_to_utc_iso,
 )
 
 
@@ -54,3 +56,13 @@ def test_compute_payload_equivalence_reports_canonical_match_only() -> None:
     assert result.raw_payload_hash_match is False
     assert result.canonical_payload_hash_match is True
 
+
+def test_normalize_wayback_timestamp_to_utc_iso() -> None:
+    assert normalize_wayback_timestamp_to_utc_iso("20260425155959") == "2026-04-25T15:59:59Z"
+    assert normalize_wayback_timestamp_to_utc_iso("20260425160001") == "2026-04-25T16:00:01Z"
+
+
+@pytest.mark.parametrize("value", ["2026042515595", "2026042515595A"])
+def test_normalize_wayback_timestamp_rejects_invalid_input(value: str) -> None:
+    with pytest.raises(ValueError):
+        normalize_wayback_timestamp_to_utc_iso(value)

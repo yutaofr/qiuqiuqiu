@@ -28,6 +28,9 @@ from qqq_cycle.data_contracts.canonical_payload import (
     CANONICALIZATION_METHOD,
     compute_canonical_sha256,
 )
+from qqq_cycle.data_contracts.strict_evidence import (
+    normalize_wayback_timestamp_to_utc_iso,
+)
 
 
 STRICT_EVIDENCE_CLASSES = frozenset(
@@ -150,6 +153,8 @@ def parse_utc_timestamp(value: str | datetime | None) -> datetime | None:
         text = str(value).strip()
         if not text:
             return None
+        if len(text) == 14 and text.isdigit():
+            text = normalize_wayback_timestamp_to_utc_iso(text)
         if text.endswith("Z"):
             text = text[:-1] + "+00:00"
         parsed = datetime.fromisoformat(text)

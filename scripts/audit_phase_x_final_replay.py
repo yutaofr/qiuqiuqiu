@@ -242,7 +242,21 @@ def run_audit(inputs: AuditInputs) -> dict[str, Any]:
         "ops_status_written": bool(
             artifact_flags["ops_status_json_exists"] and artifact_flags["ops_status_md_exists"]
         ),
-        "strict_upgrade_attempted": bool(strict_upgrade.get("strict_upgrade_attempted", False)),
+        "strict_evidence_exploration_ran": bool(
+            strict_upgrade.get("strict_evidence_exploration_ran", False)
+        ),
+        "strict_candidate_generated": bool(
+            strict_upgrade.get(
+                "strict_candidate_generated",
+                strict_upgrade.get("strict_upgrade_attempted", False),
+            )
+        ),
+        "strict_recovery_pipeline_attempted": bool(
+            strict_upgrade.get(
+                "strict_recovery_pipeline_attempted",
+                strict_upgrade.get("strict_recovery_attempted", False),
+            )
+        ),
         "strict_upgrade_succeeded": bool(strict_upgrade.get("strict_upgrade_succeeded", False)),
         "candidate_strict_eligible": strict_upgrade.get("candidate_strict_eligible"),
         "strict_evidence_class": strict_upgrade.get("evidence_class"),

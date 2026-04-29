@@ -51,6 +51,28 @@ def test_direct_http_capture_after_sla_is_not_strict_eligible() -> None:
     assert result.strict_eligibility_reason == "evidence_after_sla_cutoff"
 
 
+def test_wayback_timestamp_before_sla_is_parsed_and_eligible() -> None:
+    result = evaluate_publication_proof(
+        proof(evidence_timestamp_utc="20260425155959"),
+        SLA,
+        raw_payload=RAW,
+    )
+
+    assert result.strict_eligible is True
+    assert result.strict_eligibility_reason == "verified_direct_http_capture_before_sla"
+
+
+def test_wayback_timestamp_after_sla_is_rejected() -> None:
+    result = evaluate_publication_proof(
+        proof(evidence_timestamp_utc="20260425160001"),
+        SLA,
+        raw_payload=RAW,
+    )
+
+    assert result.strict_eligible is False
+    assert result.strict_eligibility_reason == "evidence_after_sla_cutoff"
+
+
 def test_missing_evidence_timestamp_fails_strict() -> None:
     result = evaluate_publication_proof(proof(evidence_timestamp_utc=None), SLA, raw_payload=RAW)
 

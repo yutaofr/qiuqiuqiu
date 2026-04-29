@@ -1,0 +1,82 @@
+{
+  "policy_id": "portfolio_policy_v1",
+  "policy_version": 1,
+  "paper_only": true,
+  "broker_submission_allowed": false,
+  "base_currency": "USD",
+  "universe": [
+    {
+      "symbol": "QQQ",
+      "asset_class": "equity_growth",
+      "min_weight": 0.0,
+      "max_weight": 1.0,
+      "price_required": true
+    },
+    {
+      "symbol": "BIL",
+      "asset_class": "cash_proxy",
+      "min_weight": 0.0,
+      "max_weight": 1.0,
+      "price_required": true
+    }
+  ],
+  "constraints": {
+    "gross_exposure_max": 1.0,
+    "net_exposure_min": 0.0,
+    "net_exposure_max": 1.0,
+    "single_asset_max": 1.0,
+    "turnover_threshold": 0.02,
+    "rebalance_frequency": "weekly",
+    "leverage_allowed": false,
+    "shorting_allowed": false
+  },
+  "rho_buckets": [
+    {
+      "name": "risk_low",
+      "lower": 0.0,
+      "upper": 0.35,
+      "lower_inclusive": true,
+      "upper_inclusive": false
+    },
+    {
+      "name": "risk_mid",
+      "lower": 0.35,
+      "upper": 0.65,
+      "lower_inclusive": true,
+      "upper_inclusive": false
+    },
+    {
+      "name": "risk_high",
+      "lower": 0.65,
+      "upper": 1.0,
+      "lower_inclusive": true,
+      "upper_inclusive": true
+    }
+  ],
+  "state_policy": {
+    "strict_default": {
+      "risk_low": {
+        "QQQ": 1.0,
+        "BIL": 0.0
+      },
+      "risk_mid": {
+        "QQQ": 0.6,
+        "BIL": 0.4
+      },
+      "risk_high": {
+        "QQQ": 0.2,
+        "BIL": 0.8
+      }
+    }
+  },
+  "execution_model": {
+    "slippage_bps_default": 5,
+    "commission_per_order": 0.0,
+    "min_notional": 100.0,
+    "lot_size_mode": "fractional",
+    "friction_buffer_bps": 10
+  },
+  "known_limitations": [
+    "discrete_bucket_turnover_risk"
+  ]
+}

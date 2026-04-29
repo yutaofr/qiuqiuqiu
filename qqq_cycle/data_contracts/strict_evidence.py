@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+from datetime import datetime, timezone
 from typing import Any
 
 import base64
@@ -55,6 +56,18 @@ class PayloadEquivalenceResult:
     canonicalization_method: str | None
     canonicalization_version: str | None
     numeric_canonicalization_uses_decimal: bool
+
+
+def normalize_wayback_timestamp_to_utc_iso(value: str) -> str:
+    """Normalize a 14-digit Wayback timestamp to an explicit UTC ISO string."""
+
+    text = str(value).strip()
+    if len(text) != 14:
+        raise ValueError("Wayback timestamp must be exactly 14 digits")
+    if not text.isdigit():
+        raise ValueError("Wayback timestamp must contain only digits")
+    parsed = datetime.strptime(text, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    return parsed.isoformat().replace("+00:00", "Z")
 
 
 def _looks_like_json(raw_payload: bytes) -> bool:
