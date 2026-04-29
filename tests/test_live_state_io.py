@@ -60,6 +60,11 @@ def _make_live_state(with_proto: bool = True) -> LiveState:
         prev_omega_qqq=0.65,
         macro_tail=_make_macro_tail(),
         last_successful_timestamps={"last_run": "2024-01-05T00:00:00+00:00"},
+        backfill_mode="degraded_backfill",
+        micro_state_frozen=True,
+        micro_envelope_internal_state=0.42,
+        micro_breaker_internal_state="healing",
+        micro_rho_update_state="strict_observation",
     )
 
 
@@ -80,6 +85,11 @@ def test_save_and_load_roundtrip_with_proto(tmp_path: Path) -> None:
     assert restored.breaker_active == state.breaker_active
     assert restored.weeks_outside_s1 == state.weeks_outside_s1
     assert restored.prev_omega_qqq == pytest.approx(state.prev_omega_qqq)
+    assert restored.backfill_mode == state.backfill_mode
+    assert restored.micro_state_frozen is True
+    assert restored.micro_envelope_internal_state == pytest.approx(0.42)
+    assert restored.micro_breaker_internal_state == "healing"
+    assert restored.micro_rho_update_state == "strict_observation"
 
     np.testing.assert_array_almost_equal(restored.cov_state.mean, state.cov_state.mean)
     np.testing.assert_array_almost_equal(restored.cov_state.cov_raw, state.cov_state.cov_raw)

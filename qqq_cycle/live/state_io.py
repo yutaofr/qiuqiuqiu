@@ -57,6 +57,11 @@ class LiveState:
     macro_tail: pd.DataFrame
     # Bookkeeping
     last_successful_timestamps: dict[str, str]
+    backfill_mode: str | None = None
+    micro_state_frozen: bool = False
+    micro_envelope_internal_state: float = 0.0
+    micro_breaker_internal_state: str = "inactive"
+    micro_rho_update_state: str = "initial"
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +213,11 @@ def _write_state_to_dir(state: LiveState, target: Path) -> None:
         "proto_present": proto_present,
         "proto_seed_count": proto_seed_count,
         "last_successful_timestamps": state.last_successful_timestamps,
+        "backfill_mode": state.backfill_mode,
+        "micro_state_frozen": bool(state.micro_state_frozen),
+        "micro_envelope_internal_state": float(state.micro_envelope_internal_state),
+        "micro_breaker_internal_state": state.micro_breaker_internal_state,
+        "micro_rho_update_state": state.micro_rho_update_state,
         "cov": cov_scalar,
     }
     (target / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -260,6 +270,11 @@ def load_state(state_dir: Path) -> LiveState:
             prev_omega_qqq=float(manifest["prev_omega_qqq"]),
             macro_tail=macro_tail,
             last_successful_timestamps=dict(manifest["last_successful_timestamps"]),
+            backfill_mode=manifest.get("backfill_mode"),
+            micro_state_frozen=bool(manifest.get("micro_state_frozen", False)),
+            micro_envelope_internal_state=float(manifest.get("micro_envelope_internal_state", manifest["h_t_lead_prev"])),
+            micro_breaker_internal_state=str(manifest.get("micro_breaker_internal_state", "inactive")),
+            micro_rho_update_state=str(manifest.get("micro_rho_update_state", "initial")),
         )
     except StateNotAvailableError:
         raise

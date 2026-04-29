@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, asdict
-from typing import Any
+from typing import Any, Mapping
 
 import numpy as np
 import pandas as pd
@@ -109,6 +109,11 @@ class PipelineResult:
     mode: str
     degraded_reason: str | None
     strict_contracts_satisfied: bool | None
+    backfill_mode: str | None = None
+    micro_state_frozen: bool = False
+    micro_envelope_internal_state: float | None = None
+    micro_breaker_internal_state: str | None = None
+    micro_rho_update_state: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -375,6 +380,7 @@ def run_pipeline(
     weekly_macro_inputs: pd.DataFrame,
     contracts: PipelineContracts | None = None,
     config: ModelConfig | None = None,
+    backfill_modes: Mapping[str | pd.Timestamp, str] | None = None,
 ) -> list[PipelineResult]:
     """Run the end-to-end pipeline and return one PipelineResult per week.
 
@@ -388,6 +394,8 @@ def run_pipeline(
             DFII10, DGS2, BAMLH0A0HYM2, NFCI, VIXCLS, USEPUINDXD, AI_GPR, QQQ.
         contracts: Optional strict input contracts. None → degraded mode.
         config: Optional ModelConfig. If None, loads from model_v22.yaml.
+        backfill_modes: Optional week_end to controlled backfill mode mapping.
+            A week with mode degraded_backfill freezes micro IIR state.
 
     Returns:
         List of PipelineResult, one per row in weekly_macro_inputs.
@@ -422,6 +430,7 @@ def run_pipeline(
         )
 
     can_compute_h_t, degraded_reason = _check_strict_gate(contracts)
+    normalized_backfill_modes = _normalize_backfill_modes(backfill_modes)
 
     # Precompute all layer outputs (batch, not per-row) before the routing loop.
     state = compute_state_layer(weekly_macro_inputs)
@@ -530,8 +539,28 @@ def run_pipeline(
         omega_t: float | None = None
         n_t: float | None = None
         strict_contracts_satisfied: bool | None = False
+        backfill_mode = normalized_backfill_modes.get(pd.Timestamp(week_end).strftime("%Y-%m-%d"))
+        micro_iir_state = MicroIIRState(
+            h_t_lead_prev=h_t_lead_prev,
+            heal_count=heal_count,
+            envelope_internal_state=h_t_lead_prev,
+            breaker_internal_state="active" if heal_count else "inactive",
+            rho_update_state="prior_pipeline_state",
+        )
 
-        if can_compute_h_t:
+        if backfill_mode == "degraded_backfill":
+            micro_iir_state = update_weekly_micro_iir_state(
+                micro_iir_state,
+                h_t_raw=None,
+                backfill_mode=backfill_mode,
+                delta=config.micro.iir_delta,
+                theta_heal=config.micro.heal_threshold,
+                heal_weeks=_HEAL_CIRCUIT_WEEKS,
+            )
+            h_t_lead_prev = micro_iir_state.h_t_lead_prev
+            heal_count = micro_iir_state.heal_count
+            strict_contracts_satisfied = False
+        elif can_compute_h_t:
             h_t_series = contracts.weekly_h_t  # type: ignore[union-attr]
             if week_end in h_t_series.index:
                 raw_val = h_t_series.loc[week_end]
@@ -541,13 +570,7 @@ def run_pipeline(
 
             if h_t_raw is not None:
                 micro_iir_state = update_weekly_micro_iir_state(
-                    MicroIIRState(
-                        h_t_lead_prev=h_t_lead_prev,
-                        heal_count=heal_count,
-                        envelope_internal_state=h_t_lead_prev,
-                        breaker_internal_state="active" if heal_count else "inactive",
-                        rho_update_state="prior_pipeline_state",
-                    ),
+                    micro_iir_state,
                     h_t_raw=h_t_raw,
                     delta=config.micro.iir_delta,
                     theta_heal=config.micro.heal_threshold,
@@ -593,6 +616,8 @@ def run_pipeline(
         mode = MODE_STRICT if h_t is not None else MODE_DEGRADED
         if mode == MODE_STRICT:
             row_degraded_reason = None
+        elif backfill_mode == "degraded_backfill":
+            row_degraded_reason = "controlled degraded_backfill: micro IIR state frozen"
         elif can_compute_h_t and h_t is None:
             # Weekly h_t series was provided but NaN for this week (e.g., micro
             # data not yet available or z_wrob window not yet satisfied).
@@ -630,10 +655,26 @@ def run_pipeline(
                 mode=mode,
                 degraded_reason=row_degraded_reason,
                 strict_contracts_satisfied=strict_contracts_satisfied,
+                backfill_mode=backfill_mode,
+                micro_state_frozen=micro_iir_state.micro_state_frozen,
+                micro_envelope_internal_state=micro_iir_state.envelope_internal_state,
+                micro_breaker_internal_state=micro_iir_state.breaker_internal_state,
+                micro_rho_update_state=micro_iir_state.rho_update_state,
             )
         )
 
     return results
+
+
+def _normalize_backfill_modes(
+    backfill_modes: Mapping[str | pd.Timestamp, str] | None,
+) -> dict[str, str]:
+    if not backfill_modes:
+        return {}
+    return {
+        pd.Timestamp(week_end).strftime("%Y-%m-%d"): str(mode)
+        for week_end, mode in backfill_modes.items()
+    }
 
 
 def results_to_frame(results: list[PipelineResult]) -> pd.DataFrame:

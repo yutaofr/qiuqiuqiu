@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import importlib.util
+from pathlib import Path
 
 import pandas as pd
 
@@ -157,3 +159,20 @@ def test_ops_status_summary_exposes_backfill_mode_and_strict_eligible() -> None:
 
     assert summary["controlled_backfill"]["backfill_mode"] == "degraded_backfill"
     assert summary["controlled_backfill"]["strict_eligible"] is False
+
+
+def test_run_live_pipeline_default_chain_reads_controlled_backfill_result(tmp_path) -> None:
+    payload = result_for(
+        BackfillDecision("degraded_backfill", "degraded_backfill_without_pit_proof", False, True, True),
+        "validation_passed_strict",
+    )
+    path = tmp_path / "controlled_backfill_result_qqq_2026-04-24.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    script_path = Path(__file__).resolve().parents[1] / "scripts" / "run_live_pipeline.py"
+    spec = importlib.util.spec_from_file_location("run_live_pipeline_script", script_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module._controlled_backfill_mode_for_week("2026-04-24", tmp_path) == "degraded_backfill"

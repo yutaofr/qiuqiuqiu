@@ -34,6 +34,7 @@ from qqq_cycle.data_contracts.symbol_identity import InMemorySymbolIdentityResol
 from qqq_cycle.data_contracts.weights import CsvWeightStore
 from qqq_cycle.live.runtime import LiveRunResult, LiveRuntime
 from qqq_cycle.live.state_io import StateNotAvailableError
+from qqq_cycle.ops.backfill_ingest import load_controlled_backfill_result
 from qqq_cycle.pipeline import PipelineContracts
 
 STATE_DIR = Path("state")
@@ -106,6 +107,19 @@ def _build_contracts() -> PipelineContracts | None:
     )
 
 
+def _controlled_backfill_mode_for_week(week_end: str, phase14_output_dir: Path) -> str | None:
+    controlled_result = load_controlled_backfill_result(
+        week_end=week_end,
+        asset="QQQ",
+        output_dir=phase14_output_dir,
+    )
+    if controlled_result is None:
+        return None
+    if controlled_result.get("week_end") != week_end:
+        return None
+    return str(controlled_result["backfill_mode"])
+
+
 def _print_result(result: LiveRunResult) -> None:
     def _fmt_metric(value: float | None) -> str:
         return "n/a" if value is None else f"{value:.4f}"
@@ -146,6 +160,11 @@ def main() -> None:
     )
     parser.add_argument("--state-dir", default=str(STATE_DIR))
     parser.add_argument("--output-dir", default=str(OUTPUT_DIR))
+    parser.add_argument(
+        "--phase14-output-dir",
+        default="outputs/phase14",
+        help="Directory containing controlled backfill result artifacts",
+    )
     args = parser.parse_args()
 
     week_end = args.week_end or _last_friday()
@@ -161,6 +180,7 @@ def main() -> None:
         sys.exit(1)
 
     contracts = _build_contracts()
+    backfill_mode = _controlled_backfill_mode_for_week(week_end, Path(args.phase14_output_dir))
 
     runtime = LiveRuntime()
     try:
@@ -170,6 +190,7 @@ def main() -> None:
             contracts=contracts,
             state_dir=state_dir,
             output_dir=output_dir,
+            backfill_mode=backfill_mode,
         )
     except StateNotAvailableError as exc:
         print(f"ERROR: {exc}")

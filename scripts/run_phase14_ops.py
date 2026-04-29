@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from qqq_cycle.config import load_config  # noqa: E402
 from qqq_cycle.ops.alerts import build_alert_log, write_alert_log  # noqa: E402
+from qqq_cycle.ops.backfill_ingest import load_latest_controlled_backfill_result  # noqa: E402
 from qqq_cycle.ops.regime_monitor import load_latest_snapshot_per_week  # noqa: E402
 from qqq_cycle.ops.revision_audit import build_revision_detail, load_snapshot_history, RevisionAuditInputError  # noqa: E402
 from qqq_cycle.ops.status import build_ops_status_summary, write_ops_status_outputs  # noqa: E402
@@ -54,7 +55,9 @@ def main(argv: list[str] | None = None) -> int:
             config=config,
         )
         alert_artifacts = write_alert_log(alert_log, output_dir=Path(args.output_dir))
-        controlled_backfill_result = None
+        controlled_backfill_result = load_latest_controlled_backfill_result(
+            output_dir=Path(args.output_dir)
+        )
         if args.controlled_backfill_result is not None:
             controlled_backfill_result = json.loads(
                 Path(args.controlled_backfill_result).read_text(encoding="utf-8")

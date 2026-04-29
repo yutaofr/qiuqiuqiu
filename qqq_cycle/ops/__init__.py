@@ -32,6 +32,8 @@ from qqq_cycle.ops.backfill_ingest import (
     controlled_backfill_result_from_decision,
     decide_backfill_scheme,
     evaluate_strict_store_gate,
+    load_controlled_backfill_result,
+    load_latest_controlled_backfill_result,
     write_backfill_stores,
     write_controlled_backfill_result,
 )
@@ -87,6 +89,8 @@ __all__ = [
     "controlled_backfill_result_from_decision",
     "decide_backfill_scheme",
     "evaluate_strict_store_gate",
+    "load_controlled_backfill_result",
+    "load_latest_controlled_backfill_result",
     "write_backfill_stores",
     "write_controlled_backfill_result",
     "RegimeMonitorArtifacts",

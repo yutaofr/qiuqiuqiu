@@ -264,6 +264,33 @@ def write_controlled_backfill_result(
     return path
 
 
+def load_controlled_backfill_result(
+    *,
+    week_end: str,
+    asset: str = "QQQ",
+    output_dir: str | Path = "outputs/phase14",
+) -> dict[str, Any] | None:
+    """Load the controlled backfill result for a week if it exists."""
+
+    path = Path(output_dir) / f"controlled_backfill_result_{asset.lower()}_{week_end}.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_latest_controlled_backfill_result(
+    *,
+    asset: str = "QQQ",
+    output_dir: str | Path = "outputs/phase14",
+) -> dict[str, Any] | None:
+    """Load the latest controlled backfill result by filename order."""
+
+    matches = sorted(Path(output_dir).glob(f"controlled_backfill_result_{asset.lower()}_*.json"))
+    if not matches:
+        return None
+    return json.loads(matches[-1].read_text(encoding="utf-8"))
+
+
 def _decision(
     scheme: BackfillScheme,
     reason: str,

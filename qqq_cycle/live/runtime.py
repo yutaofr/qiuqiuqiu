@@ -186,17 +186,30 @@ def _run_pipeline_step(
     omega_t: float | None = None
     n_t: float | None = None
     omega_state = np.asarray(config.risk.omega_state, dtype=float)
+    micro_iir_state = MicroIIRState(
+        h_t_lead_prev=h_t_lead_prev,
+        heal_count=heal_count,
+        envelope_internal_state=h_t_lead_prev,
+        breaker_internal_state="active" if heal_count else "inactive",
+        rho_update_state="prior_live_state",
+    )
 
-    if can_compute_h_t and h_t_raw is not None:
+    if backfill_mode == "degraded_backfill":
+        micro_iir_state = update_weekly_micro_iir_state(
+            micro_iir_state,
+            h_t_raw=None,
+            backfill_mode=backfill_mode,
+            delta=config.micro.iir_delta,
+            theta_heal=config.micro.heal_threshold,
+            heal_weeks=_HEAL_CIRCUIT_WEEKS,
+        )
+        h_t_lead_prev = micro_iir_state.h_t_lead_prev
+        heal_count = micro_iir_state.heal_count
+        strict_contracts_satisfied = False
+    elif can_compute_h_t and h_t_raw is not None:
         delta_abs = abs(drift_raw) if drift_raw is not None else 0.0
         micro_iir_state = update_weekly_micro_iir_state(
-            MicroIIRState(
-                h_t_lead_prev=h_t_lead_prev,
-                heal_count=heal_count,
-                envelope_internal_state=h_t_lead_prev,
-                breaker_internal_state="active" if heal_count else "inactive",
-                rho_update_state="prior_live_state",
-            ),
+            micro_iir_state,
             h_t_raw=h_t_raw,
             backfill_mode=backfill_mode,
             delta=config.micro.iir_delta,
@@ -228,6 +241,8 @@ def _run_pipeline_step(
     mode = MODE_STRICT if h_t is not None else MODE_DEGRADED
     if mode == MODE_STRICT:
         row_degraded_reason = None
+    elif backfill_mode == "degraded_backfill":
+        row_degraded_reason = "controlled degraded_backfill: micro IIR state frozen"
     elif can_compute_h_t and h_t is None:
         row_degraded_reason = "h_t unavailable for this week: micro data window not satisfied"
     else:
@@ -262,6 +277,11 @@ def _run_pipeline_step(
         mode=mode,
         degraded_reason=row_degraded_reason,
         strict_contracts_satisfied=bool(strict_contracts_satisfied) if strict_contracts_satisfied is not None else None,
+        backfill_mode=backfill_mode,
+        micro_state_frozen=micro_iir_state.micro_state_frozen,
+        micro_envelope_internal_state=micro_iir_state.envelope_internal_state,
+        micro_breaker_internal_state=micro_iir_state.breaker_internal_state,
+        micro_rho_update_state=micro_iir_state.rho_update_state,
     )
     return result, cov_state, proto, proto_seed, h_t_lead_prev, heal_count
 
@@ -354,6 +374,7 @@ class LiveRuntime:
         contracts: PipelineContracts | None = None,
         state_dir: Path,
         output_dir: Path,
+        backfill_mode: str | None = None,
     ) -> LiveRunResult:
         """Run one weekly live cycle.
 
@@ -365,6 +386,7 @@ class LiveRuntime:
             contracts: Optional strict input contracts for h_t computation.
             state_dir: Directory holding live_state_latest/.
             output_dir: Directory for live_run_log.csv and live_run_summary.json.
+            backfill_mode: Controlled backfill mode for this week, if any.
 
         Returns:
             LiveRunResult with signal, portfolio, and execution state.
@@ -482,6 +504,7 @@ class LiveRuntime:
             can_compute_h_t=can_compute_h_t,
             degraded_reason=base_degraded_reason,
             week_index=state.warmup_count,
+            backfill_mode=backfill_mode,
             state_frame=state_frame,
             stress_frame=stress_frame,
             drift_frame=drift_frame,
@@ -522,6 +545,15 @@ class LiveRuntime:
                 "last_run": run_ts,
                 "last_week_end": week_end,
             },
+            backfill_mode=pipeline_result.backfill_mode,
+            micro_state_frozen=pipeline_result.micro_state_frozen,
+            micro_envelope_internal_state=float(
+                pipeline_result.micro_envelope_internal_state
+                if pipeline_result.micro_envelope_internal_state is not None
+                else new_h_t_lead_prev
+            ),
+            micro_breaker_internal_state=pipeline_result.micro_breaker_internal_state or "inactive",
+            micro_rho_update_state=pipeline_result.micro_rho_update_state or "initial",
         )
         save_state(new_state, state_dir)
 
@@ -544,6 +576,8 @@ class LiveRuntime:
             "s_t": pipeline_result.s_t,
             "h_t": pipeline_result.h_t,
             "rho_t": pipeline_result.rho_t,
+            "backfill_mode": pipeline_result.backfill_mode,
+            "micro_state_frozen": pipeline_result.micro_state_frozen,
             "I_t": asdict(pipeline_result.I_t) if pipeline_result.I_t is not None else None,
         }
         portfolio_bundle = {
@@ -604,6 +638,7 @@ _LOG_FIELDNAMES = [
     "run_timestamp", "week_end", "mode", "execution_state", "execution_permitted",
     "degraded_reason", "block_reason", "strict_contracts_satisfied",
     "k_hat_t", "s_t", "h_t", "rho_t",
+    "backfill_mode", "micro_state_frozen",
     "omega_qqq_final", "circuit_breaker_active", "reason",
     "freshness_block_count", "freshness_degrade_count",
 ]
@@ -636,6 +671,8 @@ def _append_run_log(
         "s_t": pr.s_t,
         "h_t": pr.h_t,
         "rho_t": pr.rho_t,
+        "backfill_mode": pr.backfill_mode or "",
+        "micro_state_frozen": pr.micro_state_frozen,
         "omega_qqq_final": pw.omega_qqq_final,
         "circuit_breaker_active": pw.circuit_breaker_active,
         "reason": pw.reason,
@@ -676,6 +713,11 @@ def _write_run_summary(
         "s_t": pr.s_t,
         "h_t": pr.h_t,
         "rho_t": pr.rho_t,
+        "backfill_mode": pr.backfill_mode,
+        "micro_state_frozen": pr.micro_state_frozen,
+        "micro_envelope_internal_state": pr.micro_envelope_internal_state,
+        "micro_breaker_internal_state": pr.micro_breaker_internal_state,
+        "micro_rho_update_state": pr.micro_rho_update_state,
         "I_t": asdict(pr.I_t) if pr.I_t is not None else None,
         "interpretability": pr.interpretability,
         "omega_qqq_final": pw.omega_qqq_final,

@@ -181,6 +181,73 @@ def test_hot_restart_state_continuity(tmp_path: Path) -> None:
         assert abs(result2.signal_bundle["rho_t"] - batch_last.rho_t) < 1e-6
 
 
+def test_live_run_week_degraded_backfill_freezes_persisted_micro_state(tmp_path: Path) -> None:
+    macro_df = synthetic_replay_inputs()
+    n = 600
+    contracts = _make_strict_contracts(macro_df.index[: n + 2])
+    _bootstrap_state_at_week(macro_df.iloc[:n], n - 1, contracts, tmp_path)
+    before = load_state(tmp_path)
+
+    runtime = LiveRuntime()
+    week_end_n = macro_df.index[n].strftime("%Y-%m-%d")
+    result = runtime.run_week(
+        week_end=week_end_n,
+        macro_row=macro_df.iloc[n],
+        contracts=contracts,
+        state_dir=tmp_path,
+        output_dir=tmp_path / "out",
+        backfill_mode="degraded_backfill",
+    )
+    after_degraded = load_state(tmp_path)
+
+    assert result.signal_bundle["mode"] == "degraded"
+    assert result.signal_bundle["backfill_mode"] == "degraded_backfill"
+    assert result.signal_bundle["micro_state_frozen"] is True
+    assert after_degraded.h_t_lead_prev == pytest.approx(before.h_t_lead_prev)
+    assert after_degraded.heal_count == before.heal_count
+    assert after_degraded.micro_state_frozen is True
+    assert after_degraded.backfill_mode == "degraded_backfill"
+
+    week_end_n1 = macro_df.index[n + 1].strftime("%Y-%m-%d")
+    runtime.run_week(
+        week_end=week_end_n1,
+        macro_row=macro_df.iloc[n + 1],
+        contracts=contracts,
+        state_dir=tmp_path,
+        output_dir=tmp_path / "out",
+    )
+    after_next = load_state(tmp_path)
+
+    assert after_next.week_end == week_end_n1
+    assert after_next.last_successful_timestamps["last_week_end"] == week_end_n1
+    assert after_next.h_t_lead_prev >= after_degraded.h_t_lead_prev * load_config().micro.iir_delta
+
+
+def test_batch_run_pipeline_degraded_backfill_freezes_micro_state() -> None:
+    macro_df = synthetic_replay_inputs()
+    n = 600
+    frame = macro_df.iloc[:n]
+    contracts = _make_strict_contracts(frame.index)
+    backfill_week = frame.index[-2].strftime("%Y-%m-%d")
+
+    baseline = run_pipeline(frame, contracts=contracts)
+    with_backfill = run_pipeline(
+        frame,
+        contracts=contracts,
+        backfill_modes={backfill_week: "degraded_backfill"},
+    )
+
+    frozen_row = with_backfill[-2]
+    prior_row = with_backfill[-3]
+    assert frozen_row.mode == "degraded"
+    assert frozen_row.backfill_mode == "degraded_backfill"
+    assert frozen_row.micro_state_frozen is True
+    assert frozen_row.micro_envelope_internal_state == pytest.approx(
+        prior_row.micro_envelope_internal_state
+    )
+    assert with_backfill[-1].micro_envelope_internal_state != baseline[-1].micro_envelope_internal_state
+
+
 def test_block_gate_prevents_execution_permitted(tmp_path: Path) -> None:
     """When a block-level freshness failure occurs, execution_permitted == False."""
     macro_df = synthetic_replay_inputs()

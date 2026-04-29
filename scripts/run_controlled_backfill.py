@@ -12,7 +12,11 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from qqq_cycle.data_contracts.backfill_validation import validate_normalized_holdings
-from qqq_cycle.data_contracts.publication_proof import evaluate_publication_proof, read_publication_proof
+from qqq_cycle.data_contracts.publication_proof import (
+    PublicationProof,
+    evaluate_publication_proof,
+    read_publication_proof,
+)
 from qqq_cycle.ops.backfill_ingest import (
     controlled_backfill_result_from_decision,
     decide_backfill_scheme,
@@ -39,9 +43,29 @@ def main() -> None:
     raw_path = args.raw_path or Path("captures") / f"invesco_qqq_holdings_{args.week_end}_raw.csv"
     normalized_path = args.normalized_path or Path("normalized") / f"qqq_holdings_{args.week_end}_normalized.csv"
 
-    proof = read_publication_proof(proof_path)
-    raw_payload = raw_path.read_bytes()
-    proof_result = evaluate_publication_proof(proof, args.sla_cutoff_utc, raw_payload=raw_payload)
+    raw_payload: bytes | None = None
+    if proof_path.exists() and raw_path.exists():
+        proof = read_publication_proof(proof_path)
+        raw_payload = raw_path.read_bytes()
+        proof_result = evaluate_publication_proof(proof, args.sla_cutoff_utc, raw_payload=raw_payload)
+    else:
+        proof_result = PublicationProof(
+            source_label="Invesco official QQQ holdings export",
+            source_url="",
+            content_sha256="",
+            fetched_at_utc="",
+            evidence_class="missing_machine_evidence",
+            evidence_timestamp_utc=None,
+            http_status=None,
+            http_date_header=None,
+            etag=None,
+            last_modified_header=None,
+            object_version_id=None,
+            audit_log_sha256=None,
+            third_party_snapshot_url=None,
+            strict_eligible=False,
+            strict_eligibility_reason="missing_machine_evidence",
+        )
     if normalized_path.exists():
         normalized = pd.read_csv(normalized_path)
     else:
