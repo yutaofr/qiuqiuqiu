@@ -1,0 +1,17 @@
+{
+  "audit_log_sha256": null,
+  "content_sha256": "7e36759ddfea555abb0737f80e2bd457c42cc29f1699a81890a28a022a6a5d79",
+  "etag": null,
+  "evidence_class": "direct_http_capture_at_or_before_sla",
+  "evidence_timestamp_utc": "2026-04-29T09:35:55Z",
+  "fetched_at_utc": "2026-04-29T09:35:55Z",
+  "http_date_header": "Wed, 29 Apr 2026 09:35:55 GMT",
+  "http_status": 200,
+  "last_modified_header": "Tue, 28 Apr 2026 13:55:17 GMT",
+  "object_version_id": null,
+  "source_label": "Invesco official QQQ holdings export",
+  "source_url": "https://www.invesco.com/us/financial-products/etfs/holdings?audienceType=Investor&ticker=QQQ",
+  "strict_eligibility_reason": "evidence_after_sla_cutoff",
+  "strict_eligible": false,
+  "third_party_snapshot_url": null
+}
