@@ -478,7 +478,7 @@ def update_weekly_micro_iir_state(
     empty-observation decay, or breaker transition is applied.
     """
 
-    if backfill_mode == "degraded_backfill":
+    if backfill_mode in {"degraded_backfill", "block"}:
         return MicroIIRState(
             h_t_lead_prev=prior.h_t_lead_prev,
             heal_count=prior.heal_count,

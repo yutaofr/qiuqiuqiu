@@ -26,22 +26,17 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from qqq_cycle.data_contracts.constituents import CsvConstituentStore
-from qqq_cycle.data_contracts.corp_actions import InMemoryCorporateActionStore
-from qqq_cycle.data_contracts.pit_adjustment import DataNotAvailableError, LedgerPITAdjustmentEngine
-from qqq_cycle.data_contracts.raw_prices import CsvRawPriceStore
-from qqq_cycle.data_contracts.symbol_identity import InMemorySymbolIdentityResolver
-from qqq_cycle.data_contracts.weights import CsvWeightStore
+from qqq_cycle.live.controlled_backfill_contracts import resolve_live_contracts_for_week
 from qqq_cycle.live.runtime import LiveRunResult, LiveRuntime
 from qqq_cycle.live.state_io import StateNotAvailableError
 from qqq_cycle.ops.backfill_ingest import load_controlled_backfill_result
-from qqq_cycle.pipeline import PipelineContracts
 
 STATE_DIR = Path("state")
 OUTPUT_DIR = Path("outputs/live")
 REAL_STAGING_CSV = Path("cache/real_replay/staging/weekly_inputs.csv")
 MICRO_CACHE_DIR = Path("cache/micro")
 PRODUCTION_LEDGER_DIR = Path("outputs/production_ledgers")
+STORE_ROOT = Path("stores")
 
 
 def _last_friday() -> str:
@@ -66,45 +61,6 @@ def _load_macro_row(week_end: str) -> pd.Series:
             f"Latest available: {available}"
         )
     return df.loc[ts]
-
-
-def _build_contracts() -> PipelineContracts | None:
-    """Build micro contracts from cached stores, or return None."""
-    const_csv = MICRO_CACHE_DIR / "constituents.csv"
-    weights_csv = MICRO_CACHE_DIR / "weights.csv"
-    prices_dir = MICRO_CACHE_DIR / "prices"
-
-    if not const_csv.exists() or not weights_csv.exists():
-        print("  [warn] micro stores not found — running in degraded mode")
-        return None
-
-    rows: list[pd.DataFrame] = []
-    for path in sorted(prices_dir.glob("*.csv")):
-        df = pd.read_csv(path, usecols=["trade_date", "raw_close", "asof_timestamp"])
-        df["ticker"] = path.stem.upper()
-        df["source_label"] = "local_seed_raw_close"
-        rows.append(df[["trade_date", "ticker", "raw_close", "source_label", "asof_timestamp"]])
-
-    if not rows:
-        print("  [warn] no raw price files in cache/micro/prices/ — running in degraded mode")
-        return None
-
-    PRODUCTION_LEDGER_DIR.mkdir(parents=True, exist_ok=True)
-    ledger_path = PRODUCTION_LEDGER_DIR / "raw_prices.csv"
-    pd.concat(rows, ignore_index=True).sort_values(["ticker", "trade_date"]).to_csv(
-        ledger_path, index=False
-    )
-
-    pit_engine = LedgerPITAdjustmentEngine(
-        raw_price_store=CsvRawPriceStore(ledger_path),
-        corporate_action_store=InMemoryCorporateActionStore([]),
-        identity_resolver=InMemorySymbolIdentityResolver([]),
-    )
-    return PipelineContracts(
-        pit_engine=pit_engine,
-        constituent_store=CsvConstituentStore(const_csv),
-        weight_store=CsvWeightStore(weights_csv),
-    )
 
 
 def _controlled_backfill_mode_for_week(week_end: str, phase14_output_dir: Path) -> str | None:
@@ -165,6 +121,11 @@ def main() -> None:
         default="outputs/phase14",
         help="Directory containing controlled backfill result artifacts",
     )
+    parser.add_argument(
+        "--store-root",
+        default=str(STORE_ROOT),
+        help="Strict/backfill store root for controlled backfill weeks",
+    )
     args = parser.parse_args()
 
     week_end = args.week_end or _last_friday()
@@ -179,8 +140,24 @@ def main() -> None:
         print(f"ERROR: {exc}")
         sys.exit(1)
 
-    contracts = _build_contracts()
-    backfill_mode = _controlled_backfill_mode_for_week(week_end, Path(args.phase14_output_dir))
+    controlled_result = load_controlled_backfill_result(
+        week_end=week_end,
+        asset="QQQ",
+        output_dir=Path(args.phase14_output_dir),
+    )
+    resolution = resolve_live_contracts_for_week(
+        week_end=week_end,
+        asset="QQQ",
+        controlled_backfill_result=controlled_result,
+        store_root=Path(args.store_root),
+        legacy_cache_micro_dir=MICRO_CACHE_DIR,
+        production_ledger_dir=PRODUCTION_LEDGER_DIR,
+    )
+    contracts = resolution.contracts
+    backfill_mode = resolution.backfill_mode
+    print(f"  contract_source:    {resolution.contract_source}")
+    print(f"  strict_gate_passed: {resolution.strict_gate_passed}")
+    print(f"  contract_reason:    {resolution.reason}")
 
     runtime = LiveRuntime()
     try:
@@ -191,6 +168,8 @@ def main() -> None:
             state_dir=state_dir,
             output_dir=output_dir,
             backfill_mode=backfill_mode,
+            contract_source=resolution.contract_source,
+            strict_gate_passed=resolution.strict_gate_passed,
         )
     except StateNotAvailableError as exc:
         print(f"ERROR: {exc}")

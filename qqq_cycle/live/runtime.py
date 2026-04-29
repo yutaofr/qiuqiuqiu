@@ -115,6 +115,8 @@ def _run_pipeline_step(
     degraded_reason: str | None,
     week_index: int,
     backfill_mode: str | None = None,
+    contract_source: str | None = None,
+    strict_gate_passed: bool = False,
     # Pass precomputed state/stress/drift frames for interpretability builder
     state_frame: pd.DataFrame,
     stress_frame: pd.DataFrame,
@@ -151,6 +153,9 @@ def _run_pipeline_step(
             rho_t=None, I_t=None, interpretability=None,
             mode=MODE_WARMUP, degraded_reason=None,
             strict_contracts_satisfied=None,
+            backfill_mode=backfill_mode,
+            contract_source=contract_source,
+            strict_gate_passed=strict_gate_passed,
         )
         return result, cov_state, proto, proto_seed, h_t_lead_prev, heal_count
 
@@ -194,7 +199,7 @@ def _run_pipeline_step(
         rho_update_state="prior_live_state",
     )
 
-    if backfill_mode == "degraded_backfill":
+    if backfill_mode in {"degraded_backfill", "block"}:
         micro_iir_state = update_weekly_micro_iir_state(
             micro_iir_state,
             h_t_raw=None,
@@ -243,6 +248,8 @@ def _run_pipeline_step(
         row_degraded_reason = None
     elif backfill_mode == "degraded_backfill":
         row_degraded_reason = "controlled degraded_backfill: micro IIR state frozen"
+    elif backfill_mode == "block":
+        row_degraded_reason = "controlled block: micro IIR state held"
     elif can_compute_h_t and h_t is None:
         row_degraded_reason = "h_t unavailable for this week: micro data window not satisfied"
     else:
@@ -282,6 +289,8 @@ def _run_pipeline_step(
         micro_envelope_internal_state=micro_iir_state.envelope_internal_state,
         micro_breaker_internal_state=micro_iir_state.breaker_internal_state,
         micro_rho_update_state=micro_iir_state.rho_update_state,
+        contract_source=contract_source,
+        strict_gate_passed=strict_gate_passed,
     )
     return result, cov_state, proto, proto_seed, h_t_lead_prev, heal_count
 
@@ -375,6 +384,8 @@ class LiveRuntime:
         state_dir: Path,
         output_dir: Path,
         backfill_mode: str | None = None,
+        contract_source: str | None = None,
+        strict_gate_passed: bool = False,
     ) -> LiveRunResult:
         """Run one weekly live cycle.
 
@@ -387,6 +398,8 @@ class LiveRuntime:
             state_dir: Directory holding live_state_latest/.
             output_dir: Directory for live_run_log.csv and live_run_summary.json.
             backfill_mode: Controlled backfill mode for this week, if any.
+            contract_source: Source selected by live contract resolver.
+            strict_gate_passed: Whether controlled strict store gate passed.
 
         Returns:
             LiveRunResult with signal, portfolio, and execution state.
@@ -505,6 +518,8 @@ class LiveRuntime:
             degraded_reason=base_degraded_reason,
             week_index=state.warmup_count,
             backfill_mode=backfill_mode,
+            contract_source=contract_source,
+            strict_gate_passed=strict_gate_passed,
             state_frame=state_frame,
             stress_frame=stress_frame,
             drift_frame=drift_frame,
@@ -554,6 +569,8 @@ class LiveRuntime:
             ),
             micro_breaker_internal_state=pipeline_result.micro_breaker_internal_state or "inactive",
             micro_rho_update_state=pipeline_result.micro_rho_update_state or "initial",
+            contract_source=pipeline_result.contract_source,
+            strict_gate_passed=pipeline_result.strict_gate_passed,
         )
         save_state(new_state, state_dir)
 
@@ -578,6 +595,8 @@ class LiveRuntime:
             "rho_t": pipeline_result.rho_t,
             "backfill_mode": pipeline_result.backfill_mode,
             "micro_state_frozen": pipeline_result.micro_state_frozen,
+            "contract_source": pipeline_result.contract_source,
+            "strict_gate_passed": pipeline_result.strict_gate_passed,
             "I_t": asdict(pipeline_result.I_t) if pipeline_result.I_t is not None else None,
         }
         portfolio_bundle = {
@@ -638,7 +657,7 @@ _LOG_FIELDNAMES = [
     "run_timestamp", "week_end", "mode", "execution_state", "execution_permitted",
     "degraded_reason", "block_reason", "strict_contracts_satisfied",
     "k_hat_t", "s_t", "h_t", "rho_t",
-    "backfill_mode", "micro_state_frozen",
+    "backfill_mode", "micro_state_frozen", "contract_source", "strict_gate_passed",
     "omega_qqq_final", "circuit_breaker_active", "reason",
     "freshness_block_count", "freshness_degrade_count",
 ]
@@ -673,6 +692,8 @@ def _append_run_log(
         "rho_t": pr.rho_t,
         "backfill_mode": pr.backfill_mode or "",
         "micro_state_frozen": pr.micro_state_frozen,
+        "contract_source": pr.contract_source or "",
+        "strict_gate_passed": pr.strict_gate_passed,
         "omega_qqq_final": pw.omega_qqq_final,
         "circuit_breaker_active": pw.circuit_breaker_active,
         "reason": pw.reason,
@@ -718,6 +739,8 @@ def _write_run_summary(
         "micro_envelope_internal_state": pr.micro_envelope_internal_state,
         "micro_breaker_internal_state": pr.micro_breaker_internal_state,
         "micro_rho_update_state": pr.micro_rho_update_state,
+        "contract_source": pr.contract_source,
+        "strict_gate_passed": pr.strict_gate_passed,
         "I_t": asdict(pr.I_t) if pr.I_t is not None else None,
         "interpretability": pr.interpretability,
         "omega_qqq_final": pw.omega_qqq_final,

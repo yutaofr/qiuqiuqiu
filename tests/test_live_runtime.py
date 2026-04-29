@@ -203,6 +203,8 @@ def test_live_run_week_degraded_backfill_freezes_persisted_micro_state(tmp_path:
     assert result.signal_bundle["mode"] == "degraded"
     assert result.signal_bundle["backfill_mode"] == "degraded_backfill"
     assert result.signal_bundle["micro_state_frozen"] is True
+    assert result.signal_bundle["contract_source"] is None
+    assert result.signal_bundle["strict_gate_passed"] is False
     assert after_degraded.h_t_lead_prev == pytest.approx(before.h_t_lead_prev)
     assert after_degraded.heal_count == before.heal_count
     assert after_degraded.micro_state_frozen is True
@@ -221,6 +223,47 @@ def test_live_run_week_degraded_backfill_freezes_persisted_micro_state(tmp_path:
     assert after_next.week_end == week_end_n1
     assert after_next.last_successful_timestamps["last_week_end"] == week_end_n1
     assert after_next.h_t_lead_prev >= after_degraded.h_t_lead_prev * load_config().micro.iir_delta
+
+
+def test_live_run_week_controlled_block_holds_persisted_micro_state(tmp_path: Path) -> None:
+    macro_df = synthetic_replay_inputs()
+    n = 600
+    contracts = _make_strict_contracts(macro_df.index[: n + 1])
+    _bootstrap_state_at_week(macro_df.iloc[:n], n - 1, contracts, tmp_path)
+    before = load_state(tmp_path)
+
+    result = LiveRuntime().run_week(
+        week_end=macro_df.index[n].strftime("%Y-%m-%d"),
+        macro_row=macro_df.iloc[n],
+        contracts=contracts,
+        state_dir=tmp_path,
+        output_dir=tmp_path / "out",
+        backfill_mode="block",
+        contract_source="controlled_block",
+        strict_gate_passed=False,
+    )
+    after = load_state(tmp_path)
+
+    assert result.signal_bundle["mode"] == "degraded"
+    assert result.signal_bundle["backfill_mode"] == "block"
+    assert result.signal_bundle["contract_source"] == "controlled_block"
+    assert result.signal_bundle["strict_gate_passed"] is False
+    assert result.signal_bundle["h_t"] is None
+    assert result.signal_bundle["rho_t"] is None
+    assert after.h_t_lead_prev == pytest.approx(before.h_t_lead_prev)
+    assert after.heal_count == before.heal_count
+    assert after.micro_state_frozen is True
+    assert after.contract_source == "controlled_block"
+    summary = json.loads((tmp_path / "out" / "live_run_summary.json").read_text())
+    assert summary["backfill_mode"] == "block"
+    assert summary["micro_state_frozen"] is True
+    assert summary["contract_source"] == "controlled_block"
+    assert summary["strict_gate_passed"] is False
+    log = pd.read_csv(tmp_path / "out" / "live_run_log.csv").iloc[-1]
+    assert log["backfill_mode"] == "block"
+    assert bool(log["micro_state_frozen"]) is True
+    assert log["contract_source"] == "controlled_block"
+    assert bool(log["strict_gate_passed"]) is False
 
 
 def test_batch_run_pipeline_degraded_backfill_freezes_micro_state() -> None:

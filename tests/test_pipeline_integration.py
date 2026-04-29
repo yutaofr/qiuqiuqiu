@@ -58,6 +58,9 @@ def test_result_schema():
     required_fields = [
         "week_end", "k_hat_t", "p_t", "s_t", "h_t", "rho_t", "I_t",
         "interpretability", "mode", "degraded_reason", "strict_contracts_satisfied",
+        "backfill_mode", "micro_state_frozen", "micro_envelope_internal_state",
+        "micro_breaker_internal_state", "micro_rho_update_state",
+        "contract_source", "strict_gate_passed",
     ]
     for field in required_fields:
         assert hasattr(r, field), f"PipelineResult missing field: {field}"

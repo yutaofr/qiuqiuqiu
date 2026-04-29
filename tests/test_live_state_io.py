@@ -65,6 +65,8 @@ def _make_live_state(with_proto: bool = True) -> LiveState:
         micro_envelope_internal_state=0.42,
         micro_breaker_internal_state="healing",
         micro_rho_update_state="strict_observation",
+        contract_source="stores_backfill",
+        strict_gate_passed=False,
     )
 
 
@@ -90,6 +92,8 @@ def test_save_and_load_roundtrip_with_proto(tmp_path: Path) -> None:
     assert restored.micro_envelope_internal_state == pytest.approx(0.42)
     assert restored.micro_breaker_internal_state == "healing"
     assert restored.micro_rho_update_state == "strict_observation"
+    assert restored.contract_source == "stores_backfill"
+    assert restored.strict_gate_passed is False
 
     np.testing.assert_array_almost_equal(restored.cov_state.mean, state.cov_state.mean)
     np.testing.assert_array_almost_equal(restored.cov_state.cov_raw, state.cov_state.cov_raw)

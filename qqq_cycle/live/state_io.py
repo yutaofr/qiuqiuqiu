@@ -62,6 +62,8 @@ class LiveState:
     micro_envelope_internal_state: float = 0.0
     micro_breaker_internal_state: str = "inactive"
     micro_rho_update_state: str = "initial"
+    contract_source: str | None = None
+    strict_gate_passed: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -218,6 +220,8 @@ def _write_state_to_dir(state: LiveState, target: Path) -> None:
         "micro_envelope_internal_state": float(state.micro_envelope_internal_state),
         "micro_breaker_internal_state": state.micro_breaker_internal_state,
         "micro_rho_update_state": state.micro_rho_update_state,
+        "contract_source": state.contract_source,
+        "strict_gate_passed": bool(state.strict_gate_passed),
         "cov": cov_scalar,
     }
     (target / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
@@ -275,6 +279,8 @@ def load_state(state_dir: Path) -> LiveState:
             micro_envelope_internal_state=float(manifest.get("micro_envelope_internal_state", manifest["h_t_lead_prev"])),
             micro_breaker_internal_state=str(manifest.get("micro_breaker_internal_state", "inactive")),
             micro_rho_update_state=str(manifest.get("micro_rho_update_state", "initial")),
+            contract_source=manifest.get("contract_source"),
+            strict_gate_passed=bool(manifest.get("strict_gate_passed", False)),
         )
     except StateNotAvailableError:
         raise
