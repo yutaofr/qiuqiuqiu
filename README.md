@@ -259,6 +259,21 @@ Phase 15 does not authenticate to a broker.
 Phase 15 does not submit orders.
 Phase 15 does not create live account activity.
 
+## Weekly Digest Automation
+
+The weekly digest orchestration runs locally on the macOS host and stays within the paper-only boundary.
+
+- Operator manual: [docs/weekly_digest_operator_manual.md](/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/docs/weekly_digest_operator_manual.md)
+- launchd setup: [docs/weekly_digest_launchd_setup.md](/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/docs/weekly_digest_launchd_setup.md)
+- launchd template: [launchd/com.qiuqiuqiu.weekly.plist.template](/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/launchd/com.qiuqiuqiu.weekly.plist.template)
+
+Operational invariants:
+
+- `--week-end` is optional; the orchestrator computes the latest completed Friday in `America/New_York`.
+- `DISCORD_WEBHOOK_URL` is read only through the allowlisted environment loader.
+- `.env` must be `0600` if present.
+- `WORK_ROOT` defaults to the repository root and can be overridden with `--work-root`.
+
 ## Expected Outputs
 
 Phase 14:
