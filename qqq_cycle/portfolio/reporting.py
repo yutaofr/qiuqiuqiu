@@ -10,6 +10,7 @@ from typing import Any, Mapping
 
 from qqq_cycle.portfolio.delta import PortfolioDelta
 from qqq_cycle.portfolio.order_simulator import OrderSimulationResult
+from qqq_cycle.portfolio.signal_gate import SignalEligibilityResult
 from qqq_cycle.portfolio.target_weights import TargetWeightsResult
 
 
@@ -71,6 +72,7 @@ def build_execution_summary(
     *,
     week_end: str,
     phase14_snapshot: Mapping[str, Any],
+    signal_gate: SignalEligibilityResult,
     target: TargetWeightsResult,
     delta: PortfolioDelta,
     orders: OrderSimulationResult,
@@ -79,8 +81,8 @@ def build_execution_summary(
     return {
         "week_end": week_end,
         "phase14_snapshot_hash": str(phase14_snapshot.get("source_hash") or ""),
-        "signal_eligible": target.signal_eligible,
-        "execution_allowed": delta.reason not in {"degraded_backfill_signal", "block_signal", "not_strict_mode", "execution_not_permitted", "strict_gate_failed", "h_t_missing", "rho_t_missing", "k_hat_t_missing", "s_t_missing", "paper_only_invariant_failed"},
+        "signal_eligible": signal_gate.signal_eligible,
+        "execution_allowed": signal_gate.execution_allowed,
         "target_generation_mode": target.generation_mode,
         "rebalance_required": delta.rebalance_required,
         "orders_count": orders.orders_count,
@@ -146,6 +148,7 @@ def write_phase15_artifacts(
     output_dir: str | Path,
     week_end: str,
     phase14_snapshot: Mapping[str, Any],
+    signal_gate: SignalEligibilityResult,
     target: TargetWeightsResult,
     delta: PortfolioDelta,
     orders: OrderSimulationResult,
@@ -161,6 +164,7 @@ def write_phase15_artifacts(
     summary = build_execution_summary(
         week_end=week_end,
         phase14_snapshot=phase14_snapshot,
+        signal_gate=signal_gate,
         target=target,
         delta=delta,
         orders=orders,

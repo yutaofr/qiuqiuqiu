@@ -74,6 +74,7 @@ def main() -> int:
         output_dir=args.output_dir,
         week_end=args.week_end,
         phase14_snapshot=phase14_snapshot,
+        signal_gate=signal_gate,
         target=target,
         delta=delta,
         orders=orders,
