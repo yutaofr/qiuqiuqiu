@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-04-28T23:19:11.702399+00:00",
+  "run_timestamp": "2026-04-29T09:50:21.718058+00:00",
   "week_end": "2026-05-01",
   "mode": "degraded",
   "execution_state": "block",
@@ -13,6 +13,13 @@
   "s_t": null,
   "h_t": null,
   "rho_t": null,
+  "backfill_mode": null,
+  "micro_state_frozen": false,
+  "micro_envelope_internal_state": 0.44868653055531743,
+  "micro_breaker_internal_state": "inactive",
+  "micro_rho_update_state": "prior_live_state",
+  "contract_source": "legacy_cache_micro",
+  "strict_gate_passed": false,
   "I_t": {
     "A_t": {
       "H_components": [

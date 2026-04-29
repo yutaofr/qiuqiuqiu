@@ -1,58 +1,150 @@
 {
-  "generated_at": "2026-04-28T23:19:38.792133Z",
-  "operational_now": "2026-04-28T19:19:38.792133-04:00",
+  "generated_at": "2026-04-29T09:50:38.537147Z",
+  "operational_now": "2026-04-29T05:50:38.537147-04:00",
   "required_week_end": "2026-04-24",
-  "latest_available_week_end": "2026-05-01",
-  "published_at": "2026-04-28T23:19:28Z",
+  "latest_available_week_end": "2026-04-24",
+  "published_at": "2026-04-29T09:50:06Z",
   "operational_sla_cutoff": "SAT 12:00 America/New_York",
   "current_mode": "degraded",
   "current_status": "BLOCK",
   "signal_validity": {
-    "status": "ok",
-    "reasons": []
+    "status": "block",
+    "reasons": [
+      "signal tuple is incomplete for the required week_end"
+    ]
   },
   "execution_readiness": {
-    "status": "ok",
-    "reasons": []
+    "status": "block",
+    "reasons": [
+      "constituent_store not provided; weight_store not provided; pit_engine not provided"
+    ]
   },
   "data_health": {
     "status": "block",
     "reasons": [
-      "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01"
+      "constituents stale: constituent_store not provided",
+      "weights stale: weight_store not provided",
+      "pit_prices stale: pit_engine not provided",
+      "ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
+      "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z"
     ]
   },
   "freshness": {
     "stale_sources": [
       "ai_gpr",
       "constituents",
-      "weights"
+      "weights",
+      "pit_prices"
     ],
-    "stale_source_count": 3,
-    "fresh_source_count": 3,
-    "published_by_sla": null
+    "stale_source_count": 4,
+    "fresh_source_count": 2,
+    "published_by_sla": false
   },
   "degraded_or_block_reasons": [
-    "h_t unavailable for this week: micro data window not satisfied",
-    "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00; weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
-    "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01"
+    "controlled block: micro IIR state held",
+    "constituent_store not provided; weight_store not provided; pit_engine not provided",
+    "constituents stale: constituent_store not provided",
+    "weights stale: weight_store not provided",
+    "pit_prices stale: pit_engine not provided",
+    "signal tuple is incomplete for the required week_end",
+    "ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
+    "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z"
   ],
   "current_alerts": [
     {
-      "generated_at": "2026-04-28T23:19:38.787378Z",
-      "operational_now": "2026-04-28T23:19:38.787378Z",
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
       "required_week_end": "2026-04-24",
-      "snapshot_week_end": "2026-05-01",
+      "snapshot_week_end": "2026-04-24",
       "category": "data_health",
       "alert_level": "block",
-      "alert_code": "missing_required_snapshot",
-      "message": "required week_end 2026-04-24 is not published; latest available week_end is 2026-05-01",
-      "runbook_section": "\u00a72.1"
+      "alert_code": "stale_source_block",
+      "message": "constituents stale: constituent_store not provided",
+      "runbook_section": "\u00a72.3"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "data_health",
+      "alert_level": "block",
+      "alert_code": "stale_source_block",
+      "message": "weights stale: weight_store not provided",
+      "runbook_section": "\u00a72.3"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "data_health",
+      "alert_level": "block",
+      "alert_code": "stale_source_block",
+      "message": "pit_prices stale: pit_engine not provided",
+      "runbook_section": "\u00a72.3"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "execution_readiness",
+      "alert_level": "block",
+      "alert_code": "execution_blocked",
+      "message": "constituent_store not provided; weight_store not provided; pit_engine not provided",
+      "runbook_section": "\u00a73.2"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "signal_validity",
+      "alert_level": "block",
+      "alert_code": "signal_invalid",
+      "message": "signal tuple is incomplete for the required week_end",
+      "runbook_section": "\u00a73.3"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "data_health",
+      "alert_level": "degrade",
+      "alert_code": "stale_source_degrade",
+      "message": "ai_gpr stale: AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
+      "runbook_section": "\u00a72.3"
+    },
+    {
+      "generated_at": "2026-04-29T09:50:38.532961Z",
+      "operational_now": "2026-04-29T09:50:38.532961Z",
+      "required_week_end": "2026-04-24",
+      "snapshot_week_end": "2026-04-24",
+      "category": "data_health",
+      "alert_level": "warn",
+      "alert_code": "late_snapshot_publication",
+      "message": "snapshot for week_end 2026-04-24 published at 2026-04-29T09:50:06Z after SLA cutoff 2026-04-25T16:00:00Z",
+      "runbook_section": "\u00a72.2"
     }
   ],
   "runbook_path": "docs/OPS_RUNBOOK.md",
   "runbook_references": [
-    "\u00a72.1"
+    "\u00a72.2",
+    "\u00a72.3",
+    "\u00a73.2",
+    "\u00a73.3"
   ],
-  "operator_action": "see docs/OPS_RUNBOOK.md \u00a72.1",
-  "top_reason": "h_t unavailable for this week: micro data window not satisfied"
+  "operator_action": "see docs/OPS_RUNBOOK.md \u00a72.2",
+  "top_reason": "controlled block: micro IIR state held",
+  "controlled_backfill": {
+    "week_end": "2026-04-24",
+    "asset": "QQQ",
+    "backfill_mode": "block",
+    "strict_eligible": false,
+    "revision_reason": "namespace_normalization_failure",
+    "validation_reason": "empty_holdings",
+    "decision_reason": "block_official_source_incomplete"
+  }
 }

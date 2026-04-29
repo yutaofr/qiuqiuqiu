@@ -3,13 +3,13 @@
     "A_t": {
       "H_components": [
         NaN,
-        0.12747632222933955,
-        NaN
+        0.16594483710654864,
+        0.015577795028694486
       ],
       "I_components": [
         NaN,
-        0.5701111214787835,
-        NaN
+        0.7803887775823138,
+        0.33352678157402144
       ],
       "micro_components": [
         NaN,
@@ -45,9 +45,9 @@
       "h_state": 1
     }
   },
-  "degraded_reason": "h_t unavailable for this week: micro data window not satisfied",
+  "degraded_reason": "controlled block: micro IIR state held",
   "drift_flag": 0,
-  "execution_block_reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00; weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
+  "execution_block_reason": "constituent_store not provided; weight_store not provided; pit_engine not provided",
   "execution_permitted": false,
   "execution_state": "block",
   "freshness": [
@@ -62,7 +62,7 @@
       "blocking_level": "degrade",
       "fresh_enough": false,
       "last_observation_date": "2026-04-03",
-      "reason": "AI_GPR last obs 2026-04-03 < week_end 2026-05-01",
+      "reason": "AI_GPR last obs 2026-04-03 < week_end 2026-04-24",
       "source_label": "ai_gpr"
     },
     {
@@ -76,21 +76,21 @@
       "blocking_level": "block",
       "fresh_enough": false,
       "last_observation_date": "unknown",
-      "reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
+      "reason": "constituent_store not provided",
       "source_label": "constituents"
     },
     {
       "blocking_level": "block",
       "fresh_enough": false,
       "last_observation_date": "unknown",
-      "reason": "weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
+      "reason": "weight_store not provided",
       "source_label": "weights"
     },
     {
       "blocking_level": "block",
-      "fresh_enough": true,
-      "last_observation_date": "2026-05-01",
-      "reason": null,
+      "fresh_enough": false,
+      "last_observation_date": "unknown",
+      "reason": "pit_engine not provided",
       "source_label": "pit_prices"
     }
   ],
@@ -100,8 +100,8 @@
     "H": null,
     "I": null,
     "L": null,
-    "P": null,
-    "T": 0.36421806351239877,
+    "P": 0.062311180114777945,
+    "T": 0.4741281060187104,
     "a": null,
     "d": null,
     "drift_flag": 0,
@@ -118,11 +118,11 @@
   "mode": "degraded",
   "operational_sla_cutoff": "SAT 12:00 America/New_York",
   "p_t": null,
-  "published_at": "2026-04-29T09:50:37Z",
+  "published_at": "2026-04-29T09:50:06Z",
   "rho_t": null,
   "s_t": null,
   "signal_valid_but_not_executable": false,
-  "source_hash": "1a28042b6f546e6bdec340122336df19ea4105e991914c63a0cff05791dee683",
+  "source_hash": "debcd3ee9bd83892b3fff8181e88c4a1aafe2e27230ece043359a9df30e1b62f",
   "strict_contracts_satisfied": false,
-  "week_end": "2026-05-01"
+  "week_end": "2026-04-24"
 }

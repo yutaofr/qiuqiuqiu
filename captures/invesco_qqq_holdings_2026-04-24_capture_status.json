@@ -1,0 +1,45 @@
+{
+  "asset": "QQQ",
+  "capture_reason": "capture_success_machine_readable_json",
+  "capture_success": true,
+  "content_type": "text/plain;charset=UTF-8",
+  "holdings_rows": 105,
+  "http_status": 200,
+  "payload_format": "json",
+  "probed_sources": [
+    {
+      "capture_reason": "official_source_incomplete",
+      "capture_success": false,
+      "content_type": "text/html;charset=utf-8",
+      "extension": "html",
+      "holdings_rows": 0,
+      "http_status": 200,
+      "payload_format": "html_shell",
+      "source_url": "https://www.invesco.com/us/financial-products/etfs/holdings?audienceType=Investor&ticker=QQQ"
+    },
+    {
+      "capture_reason": "capture_success_machine_readable_json",
+      "capture_success": true,
+      "content_type": "text/plain;charset=UTF-8",
+      "extension": "json",
+      "holdings_rows": 105,
+      "http_status": 200,
+      "payload_format": "json",
+      "source_url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/holdings/fund?idType=ticker&interval=monthly&productType=ETF"
+    },
+    {
+      "capture_reason": "capture_success_machine_readable_json",
+      "capture_success": true,
+      "content_type": "text/plain;charset=UTF-8",
+      "extension": "json",
+      "holdings_rows": 10,
+      "http_status": 200,
+      "payload_format": "json",
+      "source_url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/holdings/fund?idType=ticker&interval=monthly&productType=ETF&loadType=initial"
+    }
+  ],
+  "proof_path": "captures/invesco_qqq_holdings_2026-04-24_proof.json",
+  "raw_path": "captures/invesco_qqq_holdings_2026-04-24_raw.json",
+  "source_url": "https://dng-api.invesco.com/cache/v1/accounts/en_US/shareclasses/QQQ/holdings/fund?idType=ticker&interval=monthly&productType=ETF",
+  "week_end": "2026-04-24"
+}

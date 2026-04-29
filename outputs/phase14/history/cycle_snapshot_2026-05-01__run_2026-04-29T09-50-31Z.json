@@ -118,7 +118,7 @@
   "mode": "degraded",
   "operational_sla_cutoff": "SAT 12:00 America/New_York",
   "p_t": null,
-  "published_at": "2026-04-29T09:50:37Z",
+  "published_at": "2026-04-29T09:50:31Z",
   "rho_t": null,
   "s_t": null,
   "signal_valid_but_not_executable": false,

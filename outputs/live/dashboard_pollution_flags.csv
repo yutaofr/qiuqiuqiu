@@ -1,3 +1,5 @@
 week_end,execution_tier,stale_sources,fred_macro_fresh,ai_gpr_fresh,qqq_prices_fresh,constituents_fresh,weights_fresh,pit_engine_fresh
 2026-05-01,signal_invalid,ai_gpr|constituents|weights,True,False,True,False,False,
 2026-05-01,signal_invalid,ai_gpr|constituents|weights,True,False,True,False,False,
+2026-04-24,signal_invalid,ai_gpr|constituents|weights|pit_prices,True,False,True,False,False,
+2026-05-01,signal_invalid,ai_gpr|constituents|weights,True,False,True,False,False,
