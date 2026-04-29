@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -35,6 +36,11 @@ def main(argv: list[str] | None = None) -> int:
         default=str(DEFAULT_RUNBOOK_PATH),
         help="Static runbook path referenced by the dynamic ops summary",
     )
+    parser.add_argument(
+        "--controlled-backfill-result",
+        default=None,
+        help="Optional controlled backfill result JSON to expose in ops status",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -48,10 +54,16 @@ def main(argv: list[str] | None = None) -> int:
             config=config,
         )
         alert_artifacts = write_alert_log(alert_log, output_dir=Path(args.output_dir))
+        controlled_backfill_result = None
+        if args.controlled_backfill_result is not None:
+            controlled_backfill_result = json.loads(
+                Path(args.controlled_backfill_result).read_text(encoding="utf-8")
+            )
         summary = build_ops_status_summary(
             latest_view=latest_view,
             revision_detail=revision_detail,
             alert_log=alert_log,
+            controlled_backfill_result=controlled_backfill_result,
             config=config,
             runbook_path=Path(args.runbook_path),
         )

@@ -33,12 +33,14 @@ from qqq_cycle.core.interpretability import (
     build_interpretability,
 )
 from qqq_cycle.core.micro_layer import (
+    MicroIIRState,
     MicroDailyState,
     MicroLayerUnavailableError,
     compute_breadth,
     compute_correlation_concentration,
     compute_micro_score,
     update_micro_daily_state,
+    update_weekly_micro_iir_state,
     weekly_median_micro,
     z_wrob_156,
 )
@@ -538,17 +540,22 @@ def run_pipeline(
                 h_t_raw = None
 
             if h_t_raw is not None:
-                # IIR positive-interval envelope (Option B: inline state machine).
-                h_t_lead = max(h_t_raw, config.micro.iir_delta * h_t_lead_prev)
-                if h_t_raw < config.micro.heal_threshold:
-                    heal_count += 1
-                    if heal_count >= _HEAL_CIRCUIT_WEEKS:
-                        # Circuit fires: reset envelope to raw value.
-                        h_t_lead = h_t_raw
-                        heal_count = 0
-                else:
-                    heal_count = 0
-                h_t_lead_prev = h_t_lead
+                micro_iir_state = update_weekly_micro_iir_state(
+                    MicroIIRState(
+                        h_t_lead_prev=h_t_lead_prev,
+                        heal_count=heal_count,
+                        envelope_internal_state=h_t_lead_prev,
+                        breaker_internal_state="active" if heal_count else "inactive",
+                        rho_update_state="prior_pipeline_state",
+                    ),
+                    h_t_raw=h_t_raw,
+                    delta=config.micro.iir_delta,
+                    theta_heal=config.micro.heal_threshold,
+                    heal_weeks=_HEAL_CIRCUIT_WEEKS,
+                )
+                h_t_lead = micro_iir_state.h_t_lead_prev
+                h_t_lead_prev = micro_iir_state.h_t_lead_prev
+                heal_count = micro_iir_state.heal_count
 
                 h_t = h_t_raw
 

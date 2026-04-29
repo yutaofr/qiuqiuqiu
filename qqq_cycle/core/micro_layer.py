@@ -31,6 +31,42 @@ class MicroScore:
 
 
 @dataclass(frozen=True)
+class MicroIIRState:
+    """Weekly micro IIR and breaker state.
+
+    Inputs:
+        h_t_lead_prev: Prior weekly lead micro fragility memory used by rho_t.
+        heal_count: Consecutive strict low-micro weeks counted by the breaker.
+        envelope_internal_state: Auditable copy of the current IIR envelope.
+        breaker_internal_state: Human-readable breaker state.
+        rho_update_state: Last real state source used for rho_t continuity.
+        micro_state_frozen: Whether the current week intentionally froze state.
+
+    Output/time semantics:
+        State is updated only from current-week strict micro observations. A
+        controlled degraded_backfill week returns the prior values unchanged.
+    """
+
+    h_t_lead_prev: float
+    heal_count: int
+    envelope_internal_state: float
+    breaker_internal_state: str
+    rho_update_state: str
+    micro_state_frozen: bool = False
+
+    @staticmethod
+    def initial() -> "MicroIIRState":
+        return MicroIIRState(
+            h_t_lead_prev=0.0,
+            heal_count=0,
+            envelope_internal_state=0.0,
+            breaker_internal_state="inactive",
+            rho_update_state="initial",
+            micro_state_frozen=False,
+        )
+
+
+@dataclass(frozen=True)
 class MicroDailyState:
     """Point-in-time daily member state for micro-layer inputs.
 
@@ -424,3 +460,66 @@ def iir_envelope_with_breaker(
         return 0.0
     x_t = max(float(h_t) - 0.5, 0.0)
     return float(max(x_t, delta * float(x_lead_prev)))
+
+
+def update_weekly_micro_iir_state(
+    prior: MicroIIRState,
+    *,
+    h_t_raw: float | None,
+    backfill_mode: str | None = None,
+    delta: float = 0.9,
+    theta_heal: float = 0.25,
+    heal_weeks: int = 3,
+) -> MicroIIRState:
+    """Advance or freeze weekly micro IIR state.
+
+    A `degraded_backfill` week freezes h_t_lead_prev, heal_count, envelope
+    internals, breaker internals, and the rho update state. No passive decay,
+    empty-observation decay, or breaker transition is applied.
+    """
+
+    if backfill_mode == "degraded_backfill":
+        return MicroIIRState(
+            h_t_lead_prev=prior.h_t_lead_prev,
+            heal_count=prior.heal_count,
+            envelope_internal_state=prior.envelope_internal_state,
+            breaker_internal_state=prior.breaker_internal_state,
+            rho_update_state=prior.rho_update_state,
+            micro_state_frozen=True,
+        )
+    if h_t_raw is None or not np.isfinite(float(h_t_raw)):
+        return MicroIIRState(
+            h_t_lead_prev=prior.h_t_lead_prev,
+            heal_count=prior.heal_count,
+            envelope_internal_state=prior.envelope_internal_state,
+            breaker_internal_state=prior.breaker_internal_state,
+            rho_update_state=prior.rho_update_state,
+            micro_state_frozen=False,
+        )
+    if not 0.0 <= delta <= 1.0:
+        raise ValueError("delta must be in [0, 1]")
+    if heal_weeks < 1:
+        raise ValueError("heal_weeks must be >= 1")
+
+    h = float(h_t_raw)
+    h_t_lead = max(h, float(delta) * float(prior.h_t_lead_prev))
+    heal_count = int(prior.heal_count)
+    breaker_state = "inactive"
+    if h < theta_heal:
+        heal_count += 1
+        breaker_state = "healing"
+        if heal_count >= heal_weeks:
+            h_t_lead = h
+            heal_count = 0
+            breaker_state = "reset"
+    else:
+        heal_count = 0
+
+    return MicroIIRState(
+        h_t_lead_prev=h_t_lead,
+        heal_count=heal_count,
+        envelope_internal_state=h_t_lead,
+        breaker_internal_state=breaker_state,
+        rho_update_state="strict_observation",
+        micro_state_frozen=False,
+    )

@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import asdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+from qqq_cycle.ops.backfill_ingest import ControlledBackfillResult
 
 MATERIAL_DELTA_THRESHOLD = 0.05
 _FLOAT_TOLERANCE = 1e-12
@@ -44,6 +47,21 @@ class RevisionAuditArtifacts:
     summary_csv_path: Path
     detail_csv_path: Path
     tests_json_path: Path
+
+
+@dataclass(frozen=True)
+class ControlledBackfillRevisionRecord:
+    asset: str
+    week_end: str
+    run_id: str
+    created_at_utc: str
+    backfill_mode: str
+    strict_eligible: bool
+    revision_reason: str
+    validation_reason: str
+    decision_reason: str
+    content_sha256: str
+    normalized_sha256: str
 
 
 def load_snapshot_history(history_dir: str | Path) -> pd.DataFrame:
@@ -300,6 +318,62 @@ def write_revision_audit_outputs(
         detail_csv_path=detail_csv_path,
         tests_json_path=tests_json_path,
     )
+
+
+def build_controlled_backfill_revision_record(
+    result: ControlledBackfillResult | dict[str, Any],
+) -> ControlledBackfillRevisionRecord:
+    """Build an append-only audit record from an already-decided backfill result.
+
+    This helper records decisions made by qqq_cycle.ops.backfill_ingest. It does
+    not decide strict_recovery, degraded_backfill, or block.
+    """
+
+    payload = result.to_dict() if isinstance(result, ControlledBackfillResult) else dict(result)
+    required = {
+        "week_end",
+        "asset",
+        "backfill_mode",
+        "strict_eligible",
+        "revision_reason",
+        "validation_reason",
+        "decision_reason",
+        "content_sha256",
+        "normalized_sha256",
+        "created_at_utc",
+    }
+    missing = sorted(required.difference(payload))
+    if missing:
+        raise RevisionAuditInputError(f"controlled backfill result missing fields: {missing}")
+    return ControlledBackfillRevisionRecord(
+        asset=str(payload["asset"]),
+        week_end=str(payload["week_end"]),
+        run_id=f"{payload['asset']}_{payload['week_end']}_{payload['created_at_utc']}",
+        created_at_utc=str(payload["created_at_utc"]),
+        backfill_mode=str(payload["backfill_mode"]),
+        strict_eligible=bool(payload["strict_eligible"]),
+        revision_reason=str(payload["revision_reason"]),
+        validation_reason=str(payload["validation_reason"]),
+        decision_reason=str(payload["decision_reason"]),
+        content_sha256=str(payload["content_sha256"]),
+        normalized_sha256=str(payload["normalized_sha256"]),
+    )
+
+
+def append_controlled_backfill_revision_record(
+    result: ControlledBackfillResult | dict[str, Any],
+    *,
+    output_dir: str | Path,
+) -> Path:
+    """Append one controlled-backfill audit record keyed by asset/week/run."""
+
+    record = build_controlled_backfill_revision_record(result)
+    out = Path(output_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / f"controlled_backfill_revisions_{record.asset.lower()}_{record.week_end}.jsonl"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(asdict(record), sort_keys=True) + "\n")
+    return path
 
 
 def _maybe_float(value: Any) -> float | None:

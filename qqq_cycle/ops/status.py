@@ -33,6 +33,7 @@ def build_ops_status_summary(
     latest_view: pd.DataFrame,
     revision_detail: pd.DataFrame | None = None,
     alert_log: pd.DataFrame | None = None,
+    controlled_backfill_result: dict[str, Any] | None = None,
     now: pd.Timestamp | None = None,
     config: ModelConfig | None = None,
     runbook_path: str | Path = Path("docs/OPS_RUNBOOK.md"),
@@ -78,7 +79,7 @@ def build_ops_status_summary(
     degraded_or_block_reasons = _collect_reasons(snapshot_payload, alert_log)
     top_reason = degraded_or_block_reasons[0] if degraded_or_block_reasons else "none"
 
-    return {
+    summary = {
         "generated_at": operational_now.tz_convert("UTC").isoformat().replace("+00:00", "Z"),
         "operational_now": operational_now.isoformat(),
         "required_week_end": required_week_end,
@@ -102,6 +103,9 @@ def build_ops_status_summary(
         "operator_action": f"see {runbook_path} {runbook_refs[0]}",
         "top_reason": top_reason,
     }
+    if controlled_backfill_result is not None:
+        summary["controlled_backfill"] = _controlled_backfill_status(controlled_backfill_result)
+    return summary
 
 
 def render_ops_status_markdown(summary: dict[str, Any]) -> str:
@@ -236,3 +240,17 @@ def _category_line(name: str, payload: dict[str, Any]) -> str:
     reasons = payload.get("reasons") or []
     reason_text = reasons[0] if reasons else "none"
     return f"- {name}: {str(payload['status']).upper()} ({reason_text})"
+
+
+def _controlled_backfill_status(result: dict[str, Any]) -> dict[str, Any]:
+    """Expose controlled-backfill mode in ops without deciding it."""
+
+    return {
+        "week_end": result.get("week_end"),
+        "asset": result.get("asset"),
+        "backfill_mode": result.get("backfill_mode"),
+        "strict_eligible": bool(result.get("strict_eligible", False)),
+        "revision_reason": result.get("revision_reason"),
+        "validation_reason": result.get("validation_reason"),
+        "decision_reason": result.get("decision_reason"),
+    }

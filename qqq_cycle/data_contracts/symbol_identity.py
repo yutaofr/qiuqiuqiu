@@ -137,3 +137,39 @@ class CsvSymbolIdentityResolver(InMemorySymbolIdentityResolver):
                 for _, row in frame.iterrows()
             ]
         )
+
+
+@dataclass(frozen=True)
+class ShareClassMapRecord:
+    """Explicit share-class mapping used by controlled holdings normalization.
+
+    This record is not a fuzzy ticker resolver. It is an audited exact mapping
+    from an official raw symbol/exchange/share-class tuple to a canonical
+    instrument_id.
+    """
+
+    raw_symbol: str
+    exchange: str
+    share_class: str
+    instrument_id: str
+    source_label: str
+
+
+@dataclass(frozen=True)
+class InstrumentOverrideRecord:
+    """Audited exact override for an official raw holdings row."""
+
+    raw_symbol: str
+    exchange: str
+    share_class: str
+    instrument_id: str
+    reason: str
+    source_label: str
+
+
+def share_class_records_to_frame(records: list[ShareClassMapRecord]) -> pd.DataFrame:
+    return pd.DataFrame([record.__dict__ for record in records])
+
+
+def override_records_to_frame(records: list[InstrumentOverrideRecord]) -> pd.DataFrame:
+    return pd.DataFrame([record.__dict__ for record in records])

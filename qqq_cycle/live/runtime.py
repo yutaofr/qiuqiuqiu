@@ -34,6 +34,7 @@ from qqq_cycle.core.proto_online import (
     update_prototypes,
 )
 from qqq_cycle.core.risk_layer import RiskScore, blended_state_weight, compute_risk_score
+from qqq_cycle.core.micro_layer import MicroIIRState, update_weekly_micro_iir_state
 from qqq_cycle.core.state_layer import compute_state_layer
 from qqq_cycle.core.stress_layer import compute_stress_layer
 from qqq_cycle.pipeline import (
@@ -113,6 +114,7 @@ def _run_pipeline_step(
     can_compute_h_t: bool,
     degraded_reason: str | None,
     week_index: int,
+    backfill_mode: str | None = None,
     # Pass precomputed state/stress/drift frames for interpretability builder
     state_frame: pd.DataFrame,
     stress_frame: pd.DataFrame,
@@ -187,15 +189,23 @@ def _run_pipeline_step(
 
     if can_compute_h_t and h_t_raw is not None:
         delta_abs = abs(drift_raw) if drift_raw is not None else 0.0
-        h_t_lead = max(h_t_raw, config.micro.iir_delta * h_t_lead_prev)
-        if h_t_raw < config.micro.heal_threshold:
-            heal_count += 1
-            if heal_count >= _HEAL_CIRCUIT_WEEKS:
-                h_t_lead = h_t_raw
-                heal_count = 0
-        else:
-            heal_count = 0
-        h_t_lead_prev = h_t_lead
+        micro_iir_state = update_weekly_micro_iir_state(
+            MicroIIRState(
+                h_t_lead_prev=h_t_lead_prev,
+                heal_count=heal_count,
+                envelope_internal_state=h_t_lead_prev,
+                breaker_internal_state="active" if heal_count else "inactive",
+                rho_update_state="prior_live_state",
+            ),
+            h_t_raw=h_t_raw,
+            backfill_mode=backfill_mode,
+            delta=config.micro.iir_delta,
+            theta_heal=config.micro.heal_threshold,
+            heal_weeks=_HEAL_CIRCUIT_WEEKS,
+        )
+        h_t_lead = micro_iir_state.h_t_lead_prev
+        h_t_lead_prev = micro_iir_state.h_t_lead_prev
+        heal_count = micro_iir_state.heal_count
         h_t = h_t_raw
         if p_t is not None and s_t is not None:
             omega_t = blended_state_weight(
