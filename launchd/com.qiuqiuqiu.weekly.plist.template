@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.qiuqiuqiu.weekly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/ABSOLUTE/PATH/TO/scripts/run_weekly_orchestration.sh</string>
+    <string>--week-end</string>
+    <string>__WEEK_END_PLACEHOLDER__</string>
+  </array>
+
+  <!-- Operator must set the machine timezone to America/New_York, or convert Friday 16:15 ET to the local calendar-time equivalent. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>5</integer>
+    <key>Hour</key>
+    <integer>16</integer>
+    <key>Minute</key>
+    <integer>15</integer>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/ABSOLUTE/PATH/TO/qiuqiuqiu</string>
+
+  <key>StandardOutPath</key>
+  <string>/ABSOLUTE/PATH/TO/qiuqiuqiu/logs/launchd/weekly.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/ABSOLUTE/PATH/TO/qiuqiuqiu/logs/launchd/weekly.err.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>
