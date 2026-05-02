@@ -1,12 +1,12 @@
 {
   "dry_run": false,
-  "gemini_output": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T224134Z-32485/gemini_insight.md",
+  "gemini_output": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T225828Z-33181/gemini_insight.md",
   "message": "weekly orchestration completed successfully",
-  "prompt_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T224134Z-32485/gemini_prompt.md",
-  "report_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T224134Z-32485/weekly_report.json",
-  "run_dir": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T224134Z-32485",
-  "run_id": "20260502T224134Z-32485",
-  "sanitized_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T224134Z-32485/weekly_report_sanitized.json",
+  "prompt_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T225828Z-33181/gemini_prompt.md",
+  "report_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T225828Z-33181/weekly_report.json",
+  "run_dir": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T225828Z-33181",
+  "run_id": "20260502T225828Z-33181",
+  "sanitized_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260502T225828Z-33181/weekly_report_sanitized.json",
   "stage": "success",
   "success": true,
   "week_end": "2026-05-01"
