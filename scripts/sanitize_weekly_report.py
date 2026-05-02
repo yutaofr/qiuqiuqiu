@@ -66,6 +66,7 @@ def _sanitize_phase15(payload: dict[str, Any]) -> tuple[dict[str, Any], int]:
         "execution_allowed",
         "orders_count",
         "reason",
+        "delta_weights",
     )
     removed = 0
     sanitized: dict[str, Any] = {}

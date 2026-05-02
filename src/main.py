@@ -49,14 +49,19 @@ def _resolve_phase14_snapshot(week_end: str) -> Path:
     raise FileNotFoundError(f"no Phase 14 snapshot found for week_end={week_end}")
 
 
-def _resolve_phase15_summary(week_end: str) -> Path:
+def _resolve_phase15_summary(week_end: str) -> tuple[Path, Path]:
     summary_path = PHASE15_LATEST
+    delta_path = Path(f"outputs/phase15/portfolio_delta_{week_end}.json")
     if not summary_path.exists():
         raise FileNotFoundError(
             "Phase 15 summary missing; run python scripts/run_phase15_sandbox.py --week-end "
             f"{week_end} first"
         )
-    return summary_path
+    if not delta_path.exists():
+         # Fallback to latest if week-end specific missing (e.g. initial run)
+         delta_path = Path("outputs/phase15/portfolio_delta_latest.json")
+
+    return summary_path, delta_path
 
 
 def _phase14_section(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
@@ -74,8 +79,8 @@ def _phase14_section(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _phase15_section(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _phase15_section(path: Path, payload: dict[str, Any], delta_payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    section = {
         "summary_path": str(path),
         "paper_only": bool(payload.get("paper_only", False)),
         "broker_submission_allowed": bool(payload.get("broker_submission_allowed", False)),
@@ -84,13 +89,20 @@ def _phase15_section(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
         "orders_count": int(payload.get("orders_count", 0)),
         "reason": payload.get("reason"),
     }
+    if delta_payload:
+        section["delta_weights"] = delta_payload.get("delta_weights", {})
+    return section
 
 
 def build_weekly_report(week_end: str) -> dict[str, Any]:
     phase14_path = _resolve_phase14_snapshot(week_end)
-    phase15_path = _resolve_phase15_summary(week_end)
+    summary_path, delta_path = _resolve_phase15_summary(week_end)
     phase14_payload = _load_json(phase14_path)
-    phase15_payload = _load_json(phase15_path)
+    phase15_payload = _load_json(summary_path)
+
+    delta_payload = None
+    if delta_path.exists():
+        delta_payload = _load_json(delta_path)
 
     return {
         "week_end": week_end,
@@ -98,7 +110,7 @@ def build_weekly_report(week_end: str) -> dict[str, Any]:
         "system": "qiuqiuqiu",
         "source": "weekly_digest",
         "phase14": _phase14_section(phase14_path, phase14_payload),
-        "phase15": _phase15_section(phase15_path, phase15_payload),
+        "phase15": _phase15_section(summary_path, phase15_payload, delta_payload),
     }
 
 
