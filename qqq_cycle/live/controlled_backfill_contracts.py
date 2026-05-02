@@ -153,10 +153,10 @@ def _build_store_strict_contracts(
             weights_available=True,
         )
 
-    constituents_path = store_root / "strict" / "constituents" / f"{asset_lc}_constituents_{week_end}.csv"
-    weights_path = store_root / "strict" / "weights" / f"{asset_lc}_weights_{week_end}.csv"
+    constituents_dir = store_root / "strict" / "constituents"
+    weights_dir = store_root / "strict" / "weights"
     prices_dir = store_root / "strict" / "prices"
-    if not constituents_path.exists() or not weights_path.exists() or not prices_dir.exists():
+    if not constituents_dir.exists() or not weights_dir.exists() or not prices_dir.exists():
         return None
 
     price_rows: list[pd.DataFrame] = []
@@ -179,10 +179,29 @@ def _build_store_strict_contracts(
         corporate_action_store=InMemoryCorporateActionStore([]),
         identity_resolver=InMemorySymbolIdentityResolver([]),
     )
+    # Aggregate all historical constituents and weights from their respective directories
+    const_rows: list[pd.DataFrame] = []
+    for path in sorted(constituents_dir.glob(f"{asset_lc}_constituents_*.csv")):
+        const_rows.append(pd.read_csv(path))
+    if not const_rows:
+        return None
+    
+    weight_rows: list[pd.DataFrame] = []
+    for path in sorted(weights_dir.glob(f"{asset_lc}_weights_*.csv")):
+        weight_rows.append(pd.read_csv(path))
+    if not weight_rows:
+        return None
+
+    # Write unified historical files for the session
+    tmp_const_path = store_root / "strict" / f"tmp_all_constituents_{week_end}.csv"
+    tmp_weight_path = store_root / "strict" / f"tmp_all_weights_{week_end}.csv"
+    pd.concat(const_rows, ignore_index=True).to_csv(tmp_const_path, index=False)
+    pd.concat(weight_rows, ignore_index=True).to_csv(tmp_weight_path, index=False)
+
     return PipelineContracts(
         pit_engine=pit_engine,
-        constituent_store=CsvConstituentStore(constituents_path),
-        weight_store=CsvWeightStore(weights_path),
+        constituent_store=CsvConstituentStore(tmp_const_path),
+        weight_store=CsvWeightStore(tmp_weight_path),
     )
 
 

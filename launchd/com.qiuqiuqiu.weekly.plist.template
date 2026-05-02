@@ -11,7 +11,12 @@
     <string>/ABSOLUTE/PATH/TO/scripts/run_weekly_orchestration.sh</string>
   </array>
 
-  <!-- Operator must set the machine timezone to America/New_York, or convert Friday 16:15 ET to the local calendar-time equivalent. -->
+  <!--
+    IMPORTANT: Launchd StartCalendarInterval uses the LOCAL MACHINE TIME.
+    Market closes at 16:00 ET. Analysis must run AFTER market close.
+    If your machine is NOT in America/New_York, you MUST convert 16:15 ET to your local time.
+    Current diagnosis suggests the machine is in UTC+2, so this should be set to Hour: 22.
+  -->
   <key>StartCalendarInterval</key>
   <dict>
     <key>Weekday</key>

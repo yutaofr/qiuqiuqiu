@@ -337,6 +337,7 @@ def _compute_weekly_h_t_from_stores(
                 smoothed_weights=dict(micro_state.smoothed_weights),
                 trade_date=trade_ts,
                 pit_engine=pit_engine,
+                asof=asof_eod,
             )
         except MicroLayerUnavailableError:
             b_tau = float("nan")

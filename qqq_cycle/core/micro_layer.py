@@ -275,6 +275,7 @@ def compute_breadth(
     smoothed_weights: Mapping[str, float],
     trade_date: pd.Timestamp,
     pit_engine: object | None,
+    asof: pd.Timestamp | None = None,
     eps: float = 1e-12,
 ) -> float:
     """Compute §9.7 weighted breadth collapse b_tau.
@@ -295,7 +296,8 @@ def compute_breadth(
         if weight <= 0.0:
             continue
         try:
-            window = pit_engine.get_adjusted_window(ticker, date, 20, asof=date)
+            query_asof = pd.Timestamp(asof) if asof is not None else date
+            window = pit_engine.get_adjusted_window(ticker, date, 20, asof=query_asof)
         except DataNotAvailableError as exc:
             raise MicroLayerUnavailableError(str(exc)) from exc
         series = pd.Series(window, dtype=float).dropna()

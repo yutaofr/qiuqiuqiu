@@ -436,9 +436,11 @@ class LiveRuntime:
             and contracts.constituent_store is not None
             and contracts.weight_store is not None
         ):
-            single_week_index = pd.DatetimeIndex([week_ts])
+            # We need historical breadths and correlations for z_wrob_156 (156 weeks).
+            # Passing a 200-week index ensures we have enough data for a robust z-score.
+            full_week_index = pd.date_range(end=week_ts, periods=200, freq="W-FRI")
             computed_h_t = _compute_weekly_h_t_from_stores(
-                single_week_index, contracts, self.config
+                full_week_index, contracts, self.config
             )
             resolved_contracts = PipelineContracts(
                 weekly_h_t=computed_h_t,
