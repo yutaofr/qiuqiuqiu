@@ -49,7 +49,13 @@ def _truncate_description(text: str, limit: int = DESCRIPTION_LIMIT) -> tuple[st
 
 def _clean_latex(text: str) -> str:
     """Strip LaTeX delimiters like $h_t$ or \\(s_t\\) for Discord compatibility."""
-    # Handle specific common commands with raw strings
+    # 1. Handle common LaTeX parentheses
+    text = re.sub(r"\\\((.*?)\\\)", r"\1", text)
+
+    # 2. Strip paired dollar signs
+    text = re.sub(r"\$([^$]+)\$", r"\1", text)
+
+    # 3. Handle specific common commands (with or without backslashes)
     replacements = {
         r"\hat{k}_t": "k_hat_t",
         r"\hat{p}_t": "p_hat_t",
@@ -61,16 +67,17 @@ def _clean_latex(text: str) -> str:
         r"\alpha_t": "alpha_t",
         r"\delta_t": "delta_t",
         r"\gamma_t": "gamma_t",
+        "h_t": "h_t",
+        "s_t": "s_t",
     }
     for old, new in replacements.items():
         text = text.replace(old, new)
 
-    # Catch-all for dollar signs and LaTeX parentheses
-    text = re.sub(r"\$([^$]+)\$", r"\1", text)
-    text = re.sub(r"\\\((.*?)\\\)", r"\1", text)
+    # 4. Final aggressive cleanup: strip ALL remaining $, \, {, }
+    # We don't use $ for currency in this report (we use USD).
+    for char in ["$", "\\", "{", "}"]:
+        text = text.replace(char, "")
 
-    # Final cleanup of remaining formatting artifacts
-    text = text.replace("{", "").replace("}", "").replace("\\", "")
     return text
 
 
