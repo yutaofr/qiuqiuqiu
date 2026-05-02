@@ -1,51 +1,74 @@
 {
   "week_end": "2026-05-01",
-  "execution_tier": "signal_invalid",
+  "execution_tier": "signal_valid_executable",
   "state_plane": {
-    "H_t": null,
-    "I_t": null,
-    "k_hat_t": null,
-    "state_label": null,
-    "state_probabilities": null,
-    "centroids": null
+    "H_t": 0.31269664963412697,
+    "I_t": 1.2119948119645043,
+    "k_hat_t": 4,
+    "state_label": "S4",
+    "state_probabilities": {
+      "0": 0.0014986373157256196,
+      "1": 0.2769950336545357,
+      "2": 0.1867408797243519,
+      "3": 0.09763078762050291,
+      "4": 0.4371346616848839
+    },
+    "centroids": [
+      [
+        -1.2742899555978362,
+        -0.6977945683613223
+      ],
+      [
+        -0.5287099666346649,
+        0.5350926274451016
+      ],
+      [
+        0.4219159823061466,
+        0.2510798715501097
+      ],
+      [
+        0.015547320383609238,
+        -0.04912369057600069
+      ],
+      [
+        0.43591507560948556,
+        0.5737265677224189
+      ]
+    ]
   },
   "factor_attribution": {
-    "L": null,
-    "T": 0.36421806351239877,
-    "P": null,
-    "E": null
+    "L": 0.02468765375844266,
+    "T": 0.6635634594480435,
+    "P": 0.2822975092957389,
+    "E": 4.660557570790347
   },
   "stress_attribution": {
-    "displacement_d": null,
-    "acceleration_a": null,
-    "g_raw": null,
-    "g_stress": null,
-    "s_t": null
+    "displacement_d": 0.39864198631539366,
+    "acceleration_a": 0.5994897531809121,
+    "g_raw": 0.4990658697481529,
+    "g_stress": 2.7986437023215873,
+    "s_t": 0.9426024883119614
   },
   "drift_metrics": {
-    "drift_probe_raw": 0.2240430073187387,
+    "drift_probe_raw": 0.20007051901499068,
     "drift_flag": 0.0,
     "threshold_lo": 1.2,
     "threshold_hi": 1.8
   },
   "health_metrics": {
-    "warmup_count": 1108,
-    "heal_count": 0,
+    "warmup_count": 1111,
+    "heal_count": 1,
     "breaker_active": false,
-    "h_t_lead_prev": 0.44868653055531743
+    "h_t_lead_prev": 0.0019992890715186933
   },
   "pollution_flags": {
     "fred_macro_fresh": true,
-    "ai_gpr_fresh": false,
+    "ai_gpr_fresh": true,
     "qqq_prices_fresh": true,
-    "constituents_fresh": false,
-    "weights_fresh": false,
+    "constituents_fresh": true,
+    "weights_fresh": true,
     "pit_prices_fresh": true,
-    "stale_sources": [
-      "ai_gpr",
-      "constituents",
-      "weights"
-    ],
-    "execution_tier": "signal_invalid"
+    "stale_sources": [],
+    "execution_tier": "signal_valid_executable"
   }
 }

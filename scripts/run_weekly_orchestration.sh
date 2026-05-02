@@ -3,6 +3,12 @@ set -euo pipefail
 
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_ROOT="$SCRIPT_ROOT"
+
+# Ensure common macOS binary paths are in PATH for launchd compatibility
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+fi
+
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 WEEK_END=""
 NOW_UTC_OVERRIDE=""
@@ -164,14 +170,14 @@ load_safe_env() {
   if [[ ! -f "$WORK_ROOT/.env" ]]; then
     return 0
   fi
-  local webhook
-  webhook="$("$PYTHON_BIN" - "$WORK_ROOT/.env" <<'PY'
+  local results
+  results="$("$PYTHON_BIN" - "$WORK_ROOT/.env" <<'PY'
 from pathlib import Path
 import os
 import stat
 import sys
 
-allowed = {"DISCORD_WEBHOOK_URL", "ALERT_WEBHOOK_URL"}
+allowed = {"DISCORD_WEBHOOK_URL", "ALERT_WEBHOOK_URL", "GEMINI_CMD"}
 env_path = Path(sys.argv[1])
 mode = stat.S_IMODE(os.stat(env_path).st_mode)
 if mode != 0o600:
@@ -188,14 +194,21 @@ for raw_line in env_path.read_text(encoding="utf-8").splitlines():
         continue
     value = value.strip().strip("'\"")
     values[key] = value
+
+# Output values in a way that bash can easily parse
 if "DISCORD_WEBHOOK_URL" in values:
-    print(values["DISCORD_WEBHOOK_URL"])
+    print(f"DISCORD_WEBHOOK_URL={values['DISCORD_WEBHOOK_URL']}")
 elif "ALERT_WEBHOOK_URL" in values:
-    print(values["ALERT_WEBHOOK_URL"])
+    print(f"DISCORD_WEBHOOK_URL={values['ALERT_WEBHOOK_URL']}")
+
+if "GEMINI_CMD" in values:
+    print(f"GEMINI_CMD={values['GEMINI_CMD']}")
 PY
 )"
-  if [[ -n "$webhook" ]]; then
-    export DISCORD_WEBHOOK_URL="$webhook"
+  if [[ -n "$results" ]]; then
+    while IFS= read -r line; do
+      export "$line"
+    done <<< "$results"
   fi
 }
 
@@ -285,12 +298,19 @@ source = pathlib.Path(sys.argv[1])
 dest = pathlib.Path(sys.argv[2])
 sanitized = json.loads(source.read_text(encoding="utf-8"))
 prompt = [
-    "You are drafting the weekly digest insight.",
-    "Use only the sanitized JSON below.",
+    "你是一位资深的量化策略架构师，负责解读 QQQ 周期状态系统的周报数据。",
+    "你的任务是根据下方的 JSON 数据，撰写一份简洁但深刻的中文市场洞察（Markdown 格式）。",
     "",
-    json.dumps(sanitized, ensure_ascii=True, indent=2, sort_keys=True),
+    "解读核心准则：",
+    "1. 周期阶段识别：必须基于 h_t (微观浓度/集中度) 和 s_t (宏观趋势信号) 识别当前市场处于生命周期的哪个阶段。",
+    "2. 信号解读：准确引用 h_t, s_t, rho_t 和 k_hat_t 的数值。h_t 升高通常暗示微观结构脆弱性增加，s_t 反映宏观制度的切换。",
+    "3. 确定性分析：结合 'execution_permitted' 和 'mode' (strict/degraded) 评估系统对当前状态识别的确定性。",
+    "4. 语气：专业、精准、不带感情色彩，严格基于系统输出进行逻辑推导，严禁空洞的宏观臆测。",
+    "5. 格式约束：严禁使用 LaTeX 数学公式格式（如不要使用 $h_t$ 或 \\(s_t\\)）。请直接使用纯文本或行内代码格式，如 h_t 或 `s_t`。Do not use LaTeX.",
     "",
-    "Return a concise markdown insight.",
+    json.dumps(sanitized, ensure_ascii=False, indent=2, sort_keys=True),
+    "",
+    "输出要求：直接返回 Markdown 格式的洞察，标题使用 '### 周期状态观察'，内容控制在 3-5 个要点，末尾给出系统的最终结论（如：维持当前仓位、预警集中度风险等）。",
 ]
 dest.write_text("\n".join(prompt) + "\n", encoding="utf-8")
 PY

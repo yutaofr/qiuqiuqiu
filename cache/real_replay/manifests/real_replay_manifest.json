@@ -2,17 +2,20 @@
   "active_sources": [
     "DFII10",
     "DGS2",
+    "BAMLH0A0HYM2",
+    "NFCI",
     "VIXCLS",
+    "USEPUINDXD",
     "AI_GPR",
     "QQQ"
   ],
   "cache_layout": {
-    "manifests": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/manifests",
-    "raw": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/raw",
-    "staging": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/cache/real_replay/staging"
+    "manifests": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/manifests",
+    "raw": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/raw",
+    "staging": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/cache/real_replay/staging"
   },
   "data_integrity": {
-    "complete_state_inputs": false,
+    "complete_state_inputs": true,
     "required_columns": [
       "DFII10",
       "DGS2",
@@ -23,64 +26,65 @@
       "AI_GPR",
       "QQQ"
     ],
-    "source_errors": {
-      "BAMLH0A0HYM2": "HTTP Error 500: Internal Server Error",
-      "BAMLH0A0HYM2_splice": "Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'RangeIndex'",
-      "NFCI": "HTTP Error 500: Internal Server Error",
-      "USEPUINDXD": "HTTP Error 500: Internal Server Error"
-    },
-    "weekly_rows_staged": 1357
+    "source_errors": {},
+    "weekly_rows_staged": 1374
   },
   "hyoas_archive_manifest": null,
-  "hyoas_source": "fred_api",
-  "hyoas_splice_method": null,
+  "hyoas_source": "baa10y_splice",
+  "hyoas_splice_method": "OLS(BAA10Y,lvix,nfci) R\u00b2=0.917 on 156w overlap",
   "insufficient_series": [],
   "micro_scope": "disabled_no_pit_micro_contract",
-  "missing_sources": [
-    "BAMLH0A0HYM2",
-    "NFCI",
-    "USEPUINDXD"
-  ],
-  "mode": "degraded",
-  "outputs": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.claude/worktrees/vigorous-colden-048f86/outputs/replay/real",
-  "price_basis": "vendor_raw_close",
+  "missing_sources": [],
+  "mode": "state_stress_only",
+  "outputs": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/outputs/replay/real",
+  "price_basis": "vendor_backward_adjusted",
   "qqq_source_names": [
-    "yahoo_finance_cache"
+    "yfinance"
   ],
   "replay_scope": "state_stress_only",
   "risk_scope": "disabled_no_production_rho_t",
   "series_coverage": {
     "AI_GPR": {
-      "max_date": "2025-12-31",
+      "max_date": "2026-03-31",
       "min_date": "2000-01-01",
-      "rows": 9497
+      "rows": 9587
+    },
+    "BAMLH0A0HYM2": {
+      "max_date": "2026-04-30",
+      "min_date": "2000-01-07",
+      "rows": 1956
     },
     "DFII10": {
-      "max_date": "2025-12-31",
+      "max_date": "2026-04-30",
       "min_date": "2003-01-02",
-      "rows": 5753
+      "rows": 5836
     },
     "DGS2": {
-      "max_date": "2025-12-31",
+      "max_date": "2026-04-30",
       "min_date": "2000-01-03",
-      "rows": 6502
+      "rows": 6585
+    },
+    "NFCI": {
+      "max_date": "2026-04-24",
+      "min_date": "2000-01-07",
+      "rows": 1373
     },
     "QQQ": {
-      "max_date": "2025-12-30",
+      "max_date": "2026-05-01",
       "min_date": "2000-01-03",
-      "rows": 6538
+      "rows": 6622
+    },
+    "USEPUINDXD": {
+      "max_date": "2026-04-30",
+      "min_date": "2000-01-01",
+      "rows": 9617
     },
     "VIXCLS": {
-      "max_date": "2025-12-31",
+      "max_date": "2026-04-30",
       "min_date": "2000-01-03",
-      "rows": 6567
+      "rows": 6651
     }
   },
-  "source_errors": {
-    "BAMLH0A0HYM2": "HTTP Error 500: Internal Server Error",
-    "BAMLH0A0HYM2_splice": "Only valid with DatetimeIndex, TimedeltaIndex or PeriodIndex, but got an instance of 'RangeIndex'",
-    "NFCI": "HTTP Error 500: Internal Server Error",
-    "USEPUINDXD": "HTTP Error 500: Internal Server Error"
-  },
-  "weekly_rows_staged": 1357
+  "source_errors": {},
+  "weekly_rows_staged": 1374
 }

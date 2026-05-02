@@ -137,7 +137,8 @@ def check_constituents_freshness(
             reason="constituent_store not provided",
         )
     try:
-        constituent_store.get_snapshot(week_end, asof=week_end)
+        asof_eod = week_end + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        constituent_store.get_snapshot(week_end, asof=asof_eod)
         return FreshnessRecord(
             source_label="constituents",
             last_observation_date=_ts_str(week_end),
@@ -174,7 +175,8 @@ def check_weights_freshness(
             reason="weight_store not provided",
         )
     try:
-        weight_store.get_weights(week_end, asof=week_end)
+        asof_eod = week_end + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        weight_store.get_weights(week_end, asof=asof_eod)
         return FreshnessRecord(
             source_label="weights",
             last_observation_date=_ts_str(week_end),

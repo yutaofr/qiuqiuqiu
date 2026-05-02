@@ -1,0 +1,13 @@
+{
+  "asset": "QQQ",
+  "backfill_mode": "strict_recovery",
+  "content_sha256": "116c9a3bdffd2cc61f62e621e4dea6df1bdb328bc6b55fd17c218d1ece0ced93",
+  "created_at_utc": "2026-05-02T22:04:30Z",
+  "decision_reason": "degraded_backfill_without_pit_proof",
+  "normalized_sha256": "be641c5a1c5b2d3a8549b7fd176d5eebef3d84e3c360256adcbbe4468d843bcf",
+  "publication_proof_class": "direct_http_capture_at_or_before_sla",
+  "revision_reason": "controlled_backfill_without_pit_proof",
+  "strict_eligible": false,
+  "validation_reason": "validation_passed_strict",
+  "week_end": "2026-05-01"
+}

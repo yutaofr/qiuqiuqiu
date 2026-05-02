@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import re
 from typing import Any
 from urllib import error, request
 
@@ -46,8 +47,36 @@ def _truncate_description(text: str, limit: int = DESCRIPTION_LIMIT) -> tuple[st
     return text[: limit - len(suffix)] + suffix, True
 
 
+def _clean_latex(text: str) -> str:
+    """Strip LaTeX delimiters like $h_t$ or \\(s_t\\) for Discord compatibility."""
+    # Handle specific common commands with raw strings
+    replacements = {
+        r"\hat{k}_t": "k_hat_t",
+        r"\hat{p}_t": "p_hat_t",
+        r"\rho_t": "rho_t",
+        r"\sigma_t": "sigma_t",
+        r"\theta_t": "theta_t",
+        r"\omega_t": "omega_t",
+        r"\beta_t": "beta_t",
+        r"\alpha_t": "alpha_t",
+        r"\delta_t": "delta_t",
+        r"\gamma_t": "gamma_t",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # Catch-all for dollar signs and LaTeX parentheses
+    text = re.sub(r"\$([^$]+)\$", r"\1", text)
+    text = re.sub(r"\\\((.*?)\\\)", r"\1", text)
+
+    # Final cleanup of remaining formatting artifacts
+    text = text.replace("{", "").replace("}", "").replace("\\", "")
+    return text
+
+
 def _build_insight_payload(markdown: str, source_path: Path) -> PreparedPayload:
-    description, truncated = _truncate_description(markdown)
+    cleaned = _clean_latex(markdown)
+    description, truncated = _truncate_description(cleaned)
     embed: dict[str, Any] = {
         "title": "Weekly Digest Insight",
         "description": description,

@@ -1,0 +1,20 @@
+{
+  "broker_submission_allowed": false,
+  "generation_mode": "policy_bucket_mapping",
+  "gross_exposure": 1.0,
+  "known_limitations": [
+    "discrete_bucket_turnover_risk"
+  ],
+  "net_exposure": 1.0,
+  "paper_only": true,
+  "policy_id": "portfolio_policy_v1",
+  "policy_version": 1,
+  "reason": "eligible_strict_signal",
+  "rho_bucket": "risk_high",
+  "signal_eligible": true,
+  "target_weights": {
+    "BIL": 0.8,
+    "QQQ": 0.2
+  },
+  "week_end": "2026-05-01"
+}

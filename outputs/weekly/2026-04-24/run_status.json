@@ -1,0 +1,13 @@
+{
+  "dry_run": false,
+  "gemini_output": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260501T141502Z-57167/gemini_insight.md",
+  "message": "GEMINI_CMD is required for non-dry-run orchestration",
+  "prompt_path": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260501T141502Z-57167/gemini_prompt.md",
+  "report_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260501T141502Z-57167/weekly_report.json",
+  "run_dir": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260501T141502Z-57167",
+  "run_id": "20260501T141502Z-57167",
+  "sanitized_json": "/Users/weizhang/w/cycle-monitor-workspace/qiuqiuqiu/.temp/weekly/20260501T141502Z-57167/weekly_report_sanitized.json",
+  "stage": "gemini",
+  "success": false,
+  "week_end": "2026-04-24"
+}

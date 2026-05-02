@@ -1,0 +1,137 @@
+{
+  "run_timestamp": "2026-05-02T22:27:42.067965+00:00",
+  "week_end": "2026-05-01",
+  "mode": "strict",
+  "execution_state": "execute",
+  "execution_permitted": true,
+  "signal_valid_but_not_executable": false,
+  "degraded_reason": null,
+  "execution_block_reason": null,
+  "strict_contracts_satisfied": true,
+  "k_hat_t": null,
+  "p_t": null,
+  "s_t": null,
+  "h_t": 0.0019992890715186933,
+  "rho_t": null,
+  "backfill_mode": "strict_recovery",
+  "micro_state_frozen": false,
+  "micro_envelope_internal_state": 0.4038178774997857,
+  "micro_breaker_internal_state": "healing",
+  "micro_rho_update_state": "strict_observation",
+  "contract_source": "stores_strict",
+  "strict_gate_passed": true,
+  "I_t": {
+    "A_t": {
+      "H_components": [
+        NaN,
+        0.2322472108068152,
+        0.07057437732393472
+      ],
+      "I_components": [
+        NaN,
+        0.6599147402594769,
+        0.24047252737487385
+      ],
+      "stress_components": [
+        NaN,
+        NaN
+      ],
+      "micro_components": [
+        NaN,
+        NaN
+      ],
+      "rho_components": [
+        NaN,
+        NaN,
+        NaN
+      ]
+    },
+    "C_t": {
+      "c_rule": 0,
+      "c_const": 0,
+      "c_data": 1,
+      "c_micro": 1,
+      "c_drift": 0
+    },
+    "D_t": {
+      "d_state": 0.213629879870941,
+      "d_stress": NaN,
+      "d_frag": 0.0019992890715186933,
+      "d_abs": 0.213629879870941
+    },
+    "H_t": {
+      "h_macro": 0,
+      "h_exo": 0,
+      "h_micro": 1,
+      "h_state": 1
+    }
+  },
+  "interpretability": {
+    "L": null,
+    "T": 0.6635634594480435,
+    "P": 0.2822975092957389,
+    "E": null,
+    "H": null,
+    "I": null,
+    "d": null,
+    "a": null,
+    "g_raw": null,
+    "g_stress": null,
+    "s": null,
+    "drift_probe_raw": 0.213629879870941,
+    "drift_flag": 0,
+    "k_hat_t": null,
+    "p_t": null,
+    "h_t": 0.0019992890715186933,
+    "rho_t": null
+  },
+  "omega_qqq_final": 0.7216685211200469,
+  "omega_shy_final": 0.27833147887995313,
+  "circuit_breaker_active": false,
+  "rebalance_required": false,
+  "reason": "rho_t_missing",
+  "freshness": [
+    {
+      "source_label": "fred_macro",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "degrade",
+      "reason": null
+    },
+    {
+      "source_label": "ai_gpr",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "degrade",
+      "reason": null
+    },
+    {
+      "source_label": "qqq_prices",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    },
+    {
+      "source_label": "constituents",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    },
+    {
+      "source_label": "weights",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    },
+    {
+      "source_label": "pit_prices",
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
+      "blocking_level": "block",
+      "reason": null
+    }
+  ]
+}

@@ -1,95 +1,107 @@
 {
-  "run_timestamp": "2026-04-29T10:16:33.940933+00:00",
+  "run_timestamp": "2026-05-02T22:48:53.121506+00:00",
   "week_end": "2026-05-01",
-  "mode": "degraded",
-  "execution_state": "block",
-  "execution_permitted": false,
+  "mode": "strict",
+  "execution_state": "execute",
+  "execution_permitted": true,
   "signal_valid_but_not_executable": false,
-  "degraded_reason": "h_t unavailable for this week: micro data window not satisfied",
-  "execution_block_reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00; weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00",
-  "strict_contracts_satisfied": false,
-  "k_hat_t": null,
-  "p_t": null,
-  "s_t": null,
-  "h_t": null,
-  "rho_t": null,
-  "backfill_mode": null,
+  "degraded_reason": null,
+  "execution_block_reason": null,
+  "strict_contracts_satisfied": true,
+  "k_hat_t": 4,
+  "p_t": [
+    0.0014986373157256196,
+    0.2769950336545357,
+    0.1867408797243519,
+    0.09763078762050291,
+    0.4371346616848839
+  ],
+  "s_t": 0.9426024883119614,
+  "h_t": 0.0019992890715186933,
+  "rho_t": 0.6630427020697631,
+  "backfill_mode": "strict_recovery",
   "micro_state_frozen": false,
-  "micro_envelope_internal_state": 0.44868653055531743,
-  "micro_breaker_internal_state": "inactive",
-  "micro_rho_update_state": "prior_live_state",
-  "contract_source": "legacy_cache_micro",
-  "strict_gate_passed": false,
+  "micro_envelope_internal_state": 0.0019992890715186933,
+  "micro_breaker_internal_state": "healing",
+  "micro_rho_update_state": "strict_observation",
+  "contract_source": "stores_strict",
+  "strict_gate_passed": true,
   "I_t": {
     "A_t": {
       "H_components": [
-        NaN,
-        0.12747632222933955,
-        NaN
+        0.009875061503377065,
+        0.2322472108068152,
+        0.07057437732393472
       ],
       "I_components": [
-        NaN,
-        0.5701111214787835,
-        NaN
+        0.31160754433015353,
+        0.6599147402594769,
+        0.24047252737487385
       ],
       "stress_components": [
-        NaN,
-        NaN
+        0.4990658697481529,
+        4.660557570790347
       ],
       "micro_components": [
         NaN,
         NaN
       ],
       "rho_components": [
-        NaN,
-        NaN,
+        0.6630427020697631,
+        0.0,
         NaN
       ]
     },
     "C_t": {
       "c_rule": 0,
       "c_const": 0,
-      "c_data": 1,
+      "c_data": 0,
       "c_micro": 1,
       "c_drift": 0
     },
     "D_t": {
-      "d_state": 0.2240430073187387,
-      "d_stress": NaN,
-      "d_frag": NaN,
-      "d_abs": 0.2240430073187387
+      "d_state": 0.20007051901499068,
+      "d_stress": 2.7986437023215873,
+      "d_frag": 0.0019992890715186933,
+      "d_abs": 0.20007051901499068
     },
     "H_t": {
-      "h_macro": 0,
-      "h_exo": 0,
-      "h_micro": 0,
+      "h_macro": 1,
+      "h_exo": 1,
+      "h_micro": 1,
       "h_state": 1
     }
   },
   "interpretability": {
-    "L": null,
-    "T": 0.36421806351239877,
-    "P": null,
-    "E": null,
-    "H": null,
-    "I": null,
-    "d": null,
-    "a": null,
-    "g_raw": null,
-    "g_stress": null,
-    "s": null,
-    "drift_probe_raw": 0.2240430073187387,
+    "L": 0.02468765375844266,
+    "T": 0.6635634594480435,
+    "P": 0.2822975092957389,
+    "E": 4.660557570790347,
+    "H": 0.31269664963412697,
+    "I": 1.2119948119645043,
+    "d": 0.39864198631539366,
+    "a": 0.5994897531809121,
+    "g_raw": 0.4990658697481529,
+    "g_stress": 2.7986437023215873,
+    "s": 0.9426024883119614,
+    "drift_probe_raw": 0.20007051901499068,
     "drift_flag": 0,
-    "k_hat_t": null,
-    "p_t": null,
-    "h_t": null,
-    "rho_t": null
+    "k_hat_t": 4,
+    "p_t": [
+      0.0014986373157256196,
+      0.2769950336545357,
+      0.1867408797243519,
+      0.09763078762050291,
+      0.4371346616848839
+    ],
+    "h_t": 0.0019992890715186933,
+    "rho_t": 0.6630427020697631
   },
-  "omega_qqq_final": 0.7216685211200469,
-  "omega_shy_final": 0.27833147887995313,
+  "omega_qqq_final": 0.3414207537214772,
+  "omega_shy_final": 0.6585792462785228,
   "circuit_breaker_active": false,
   "rebalance_required": false,
-  "reason": "rho_t_missing",
+  "reason": "turnover_below_threshold",
   "freshness": [
     {
       "source_label": "fred_macro",
@@ -100,10 +112,10 @@
     },
     {
       "source_label": "ai_gpr",
-      "last_observation_date": "2026-04-03",
-      "fresh_enough": false,
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
       "blocking_level": "degrade",
-      "reason": "AI_GPR last obs 2026-04-03 < week_end 2026-05-01"
+      "reason": null
     },
     {
       "source_label": "qqq_prices",
@@ -114,17 +126,17 @@
     },
     {
       "source_label": "constituents",
-      "last_observation_date": "unknown",
-      "fresh_enough": false,
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
       "blocking_level": "block",
-      "reason": "constituent snapshot unavailable for 2026-05-01: no constituent data for trade_date=2026-05-01 asof=2026-05-01 00:00:00"
+      "reason": null
     },
     {
       "source_label": "weights",
-      "last_observation_date": "unknown",
-      "fresh_enough": false,
+      "last_observation_date": "2026-05-01",
+      "fresh_enough": true,
       "blocking_level": "block",
-      "reason": "weight snapshot unavailable for 2026-05-01: no weight data for trade_date=2026-05-01 asof=2026-05-01 00:00:00"
+      "reason": null
     },
     {
       "source_label": "pit_prices",

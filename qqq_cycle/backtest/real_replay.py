@@ -38,7 +38,7 @@ DEFAULT_FRED_SERIES = (
 )
 
 # 265 theta minimum + 260 dual-memory warmup buffer; advisory threshold for _insufficient()
-MIN_WARMUP_ROWS = 525
+MIN_WARMUP_ROWS = 1325
 
 AI_GPR_OFFICIAL_PAGE = "https://www.matteoiacoviello.com/ai_gpr.html"
 REQUIRED_STATE_COLUMNS = [
@@ -343,11 +343,12 @@ def _build_hyoas_splice(
 
 
 def _weekly(series: pd.Series) -> pd.Series:
-    return series.sort_index().resample("W-FRI").last()
+    return series.sort_index().resample("W-FRI").last().ffill()
 
 
 def _stage_weekly_inputs(series_map: dict[str, pd.Series], staging_dir: Path) -> pd.DataFrame:
     frame = pd.concat({name: _weekly(series) for name, series in series_map.items()}, axis=1)
+    frame = frame.ffill()
     frame.to_csv(staging_dir / "weekly_inputs.csv", index_label="week_end")
     return frame
 

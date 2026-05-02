@@ -1,15 +1,15 @@
 # Numerical Health Summary
 
-- Rows: 1583
-- Warmup rows: 732
+- Rows: 1374
+- Warmup rows: 523
 - Warm rows: 851
-- Drift flag count: 17
+- Drift flag count: 25
 - Eigval floor frequency: 0.000000
 - State health degradation frequency: 0.000000
-- Huber weight < 1 frequency: 0.155401
+- Huber weight < 1 frequency: 0.157205
 
 ## Distributions
-- maha: count=1583, p01=0, p05=0, p50=0.950546, p95=5.57488, p99=9.49672
-- huber_weight: count=1583, p01=0.263254, p05=0.448449, p50=1, p95=1, p99=1
-- condition_number_raw: count=1583, p01=2.07254, p05=2.07254, p50=3.85301, p95=10.2394, p99=40.8949
-- condition_number_reg: count=1583, p01=2.07254, p05=2.07254, p50=3.85301, p95=10.2394, p99=40.8949
+- maha: count=1374, p01=0, p05=0, p50=1.07099, p95=4.40708, p99=6.53548
+- huber_weight: count=1374, p01=0.382528, p05=0.567269, p50=1, p95=1, p99=1
+- condition_number_raw: count=1374, p01=2.08766, p05=2.08766, p50=4.09061, p95=7.59179, p99=8.52712
+- condition_number_reg: count=1374, p01=2.08766, p05=2.08766, p50=4.09061, p95=7.59179, p99=8.52712

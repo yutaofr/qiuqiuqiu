@@ -1,0 +1,21 @@
+{
+  "broker_submission_allowed": false,
+  "current_weights": {
+    "BIL": 0.4,
+    "QQQ": 0.6
+  },
+  "delta_weights": {
+    "BIL": 0.4,
+    "QQQ": -0.39999999999999997
+  },
+  "nav": 1000.0,
+  "paper_only": true,
+  "reason": "rebalance_required",
+  "rebalance_required": true,
+  "target_weights": {
+    "BIL": 0.8,
+    "QQQ": 0.2
+  },
+  "turnover": 0.4,
+  "week_end": "2026-05-01"
+}

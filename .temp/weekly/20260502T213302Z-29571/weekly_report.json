@@ -1,0 +1,27 @@
+{
+  "generated_at_utc": "2026-05-02T21:33:02Z",
+  "phase14": {
+    "backfill_mode": null,
+    "h_t": null,
+    "k_hat_t": null,
+    "micro_state_frozen": false,
+    "mode": "degraded",
+    "rho_t": null,
+    "s_t": null,
+    "snapshot_path": "outputs/phase14/cycle_snapshot_latest.json",
+    "source_hash": "17e70ac7e05fa45f7a104716442525ac7c3b60e7a474fc67e16086331abe9c89",
+    "strict_gate_passed": false
+  },
+  "phase15": {
+    "broker_submission_allowed": false,
+    "execution_allowed": false,
+    "orders_count": 0,
+    "paper_only": true,
+    "reason": "degraded_backfill_signal",
+    "signal_eligible": false,
+    "summary_path": "outputs/phase15/execution_sandbox_summary_latest.json"
+  },
+  "source": "weekly_digest",
+  "system": "qiuqiuqiu",
+  "week_end": "2026-05-01"
+}
