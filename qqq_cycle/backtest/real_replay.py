@@ -393,6 +393,7 @@ def _window_coverage(
         )
         if hyoas_max is not None and hyoas_max < last_week_end:
             window_status = "incomplete_due_to_hyoas_coverage"
+            coverage_ok = False
         rows.append(
             {
                 "window": name,

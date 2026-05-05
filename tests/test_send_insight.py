@@ -85,6 +85,7 @@ def test_dry_run_does_not_call_http(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_missing_webhook_fails_outside_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     markdown_path = _write_markdown(tmp_path / "insight.md", "# Weekly Digest\n\nhello")
     monkeypatch.delenv("DISCORD_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("ALERT_WEBHOOK_URL", raising=False)
 
     exit_code = send_insight.main(
         [

@@ -99,6 +99,8 @@ def test_dry_run_does_not_call_gemini_or_discord(tmp_path: Path) -> None:
         [
             "bash",
             str(ROOT / "scripts" / "run_weekly_orchestration.sh"),
+            "--week-end",
+            "2026-04-24",
             "--dry-run",
             "--work-root",
             str(tmp_path),
