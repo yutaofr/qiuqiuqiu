@@ -18,12 +18,18 @@ import pandas as pd
 import pytest
 
 from qqq_cycle.core.interpretability import InterpretabilityRecord
+from qqq_cycle.config import load_config
+from qqq_cycle.data_contracts.constituents import PITConstituentSnapshot
+from qqq_cycle.data_contracts.pit_adjustment import DataNotAvailableError, PITAdjustmentEngine
 from qqq_cycle.pipeline import (
     MODE_DEGRADED,
     MODE_STRICT,
     MODE_WARMUP,
     PipelineContracts,
     PipelineResult,
+    _build_audit_interpretability,
+    _compute_daily_micro_frame,
+    _compute_weekly_h_t_from_stores,
     results_to_frame,
     run_pipeline,
 )
@@ -264,3 +270,164 @@ def test_no_silent_fallback():
                 f"degraded_reason must be None in {r.mode} row {r.week_end}, "
                 f"got {r.degraded_reason!r}"
             )
+
+
+class _NonStrictPITEngine(PITAdjustmentEngine):
+    asof_semantics = "eod_same_day"
+
+    def get_adjusted_window(self, ticker, end_date, window, asof):  # pragma: no cover
+        raise AssertionError("non-strict PIT engine must not be used for micro strict mode")
+
+
+class _RecordingStrictPITEngine(PITAdjustmentEngine):
+    asof_semantics = "strict_pit"
+
+    def __init__(self, *, missing_60: set[str] | None = None) -> None:
+        super().__init__()
+        self.missing_60 = missing_60 or set()
+        self.calls: list[tuple[str, pd.Timestamp, int, pd.Timestamp]] = []
+
+    def get_adjusted_window(
+        self, ticker: str, end_date: pd.Timestamp, window: int, asof: pd.Timestamp
+    ) -> pd.Series:
+        self.calls.append((ticker, pd.Timestamp(end_date), window, pd.Timestamp(asof)))
+        if window == 60 and ticker in self.missing_60:
+            raise DataNotAvailableError(f"missing 60-day PIT window for {ticker}")
+        idx = pd.bdate_range(end=pd.Timestamp(end_date), periods=window)
+        if ticker == "C" and window == 20:
+            values = [100.0] * (window - 1) + [80.0]
+        else:
+            values = [100.0] * (window - 1) + [120.0]
+        return pd.Series(values, index=idx, dtype=float)
+
+
+class _StableConstituentStore:
+    def __init__(self, members: frozenset[str]) -> None:
+        self.members = members
+
+    def get_snapshot(self, trade_date: pd.Timestamp, asof: pd.Timestamp) -> PITConstituentSnapshot:
+        return PITConstituentSnapshot(pd.Timestamp(trade_date), self.members, pd.Timestamp(asof))
+
+
+class _YoungMemberConstituentStore:
+    def __init__(self, *, young_start: pd.Timestamp) -> None:
+        self.young_start = pd.Timestamp(young_start)
+
+    def get_snapshot(self, trade_date: pd.Timestamp, asof: pd.Timestamp) -> PITConstituentSnapshot:
+        members = {"A", "C"}
+        if pd.Timestamp(trade_date) >= self.young_start:
+            members.add("B")
+        return PITConstituentSnapshot(
+            pd.Timestamp(trade_date), frozenset(members), pd.Timestamp(asof)
+        )
+
+
+class _StaticWeightStore:
+    def __init__(self, weights: dict[str, float]) -> None:
+        self.weights = weights
+
+    def get_weights(self, trade_date: pd.Timestamp, asof: pd.Timestamp) -> dict[str, float]:
+        del trade_date, asof
+        return dict(self.weights)
+
+
+class _FlipWeightStore:
+    def __init__(self, *, flip_date: pd.Timestamp) -> None:
+        self.flip_date = pd.Timestamp(flip_date)
+
+    def get_weights(self, trade_date: pd.Timestamp, asof: pd.Timestamp) -> dict[str, float]:
+        del asof
+        if pd.Timestamp(trade_date) >= self.flip_date:
+            return {"A": 0.0, "C": 1.0}
+        return {"A": 1.0, "C": 0.0}
+
+
+def test_store_path_rejects_non_strict_pit_engine() -> None:
+    inputs = make_strict_macro_inputs()
+    contracts = PipelineContracts(
+        pit_engine=_NonStrictPITEngine(),
+        constituent_store=_StableConstituentStore(frozenset({"A", "C"})),
+        weight_store=_StaticWeightStore({"A": 0.6, "C": 0.4}),
+    )
+
+    results = run_pipeline(inputs, contracts=contracts)
+    post_warmup = [r for r in results if r.mode != MODE_WARMUP]
+
+    assert post_warmup
+    assert all(r.mode == MODE_DEGRADED for r in post_warmup)
+    assert all(r.h_t is None and r.rho_t is None for r in post_warmup)
+    assert all(r.strict_contracts_satisfied is False for r in post_warmup)
+    assert all("pit_engine" in (r.degraded_reason or "") for r in post_warmup)
+
+
+def test_store_daily_micro_uses_mature_sets_not_present_members() -> None:
+    weeks = pd.date_range("2024-01-05", periods=16, freq="W-FRI")
+    young_start = weeks[-1] - pd.tseries.offsets.BDay(10)
+    pit = _RecordingStrictPITEngine()
+    contracts = PipelineContracts(
+        pit_engine=pit,
+        constituent_store=_YoungMemberConstituentStore(young_start=young_start),
+        weight_store=_StaticWeightStore({"A": 0.45, "B": 0.10, "C": 0.45}),
+    )
+
+    daily = _compute_daily_micro_frame(pd.bdate_range(weeks[0], weeks[-1]), contracts)
+
+    assert daily["b_tau"].notna().any()
+    assert any(call[2] == 20 for call in pit.calls)
+    assert any(call[2] == 60 for call in pit.calls)
+    assert all(call[0] != "B" for call in pit.calls)
+
+
+def test_store_daily_micro_uses_prior_day_smoothed_lagged_weights() -> None:
+    days = pd.bdate_range("2024-01-02", periods=25)
+    pit = _RecordingStrictPITEngine()
+    contracts = PipelineContracts(
+        pit_engine=pit,
+        constituent_store=_StableConstituentStore(frozenset({"A", "C"})),
+        weight_store=_FlipWeightStore(flip_date=days[-1]),
+    )
+
+    daily = _compute_daily_micro_frame(days, contracts)
+    last_breadth = daily["b_tau"].dropna().iloc[-1]
+
+    assert last_breadth < 0.1
+
+
+def test_weekly_store_micro_fails_closed_when_any_mature_60d_window_missing() -> None:
+    weeks = pd.date_range("2021-01-01", periods=180, freq="W-FRI")
+    contracts = PipelineContracts(
+        pit_engine=_RecordingStrictPITEngine(missing_60={"C"}),
+        constituent_store=_StableConstituentStore(frozenset({"A", "C", "D"})),
+        weight_store=_StaticWeightStore({"A": 0.34, "C": 0.33, "D": 0.33}),
+    )
+
+    h_t = _compute_weekly_h_t_from_stores(weeks, contracts, load_config())
+
+    assert h_t.isna().all()
+
+
+def test_audit_interpretability_marks_h_state_zero_when_covariance_unhealthy() -> None:
+    week = pd.Timestamp("2024-01-05")
+    state = pd.DataFrame(
+        {"L": [1.0], "T": [2.0], "P": [3.0], "E": [0.5]},
+        index=[week],
+    )
+    stress = pd.DataFrame({"g_raw": [0.1], "g_stress": [0.2]}, index=[week])
+    drift = pd.DataFrame({"drift_probe_raw": [0.0]}, index=[week])
+
+    record = _build_audit_interpretability(
+        week,
+        state,
+        stress,
+        drift,
+        omega_t=0.6,
+        s_t=0.4,
+        n_t=0.2,
+        h_t=0.7,
+        h_t_available=True,
+        rho_t_available=True,
+        config=load_config(),
+        state_ok=False,
+    )
+
+    assert record.H_t.h_state == 0

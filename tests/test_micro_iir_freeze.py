@@ -64,6 +64,28 @@ def test_strict_recovery_does_not_freeze_state_by_default() -> None:
     assert after.heal_count == 0
 
 
+def test_weekly_micro_iir_decays_positive_envelope_around_neutral_half() -> None:
+    state = MicroIIRState.initial()
+
+    after_high = update_weekly_micro_iir_state(state, h_t_raw=0.9, delta=0.9)
+    after_neutral = update_weekly_micro_iir_state(after_high, h_t_raw=0.5, delta=0.9)
+
+    assert after_high.h_t_lead_prev == pytest.approx(0.9)
+    assert after_neutral.h_t_lead_prev == pytest.approx(0.5 + 0.9 * (0.9 - 0.5))
+
+
+def test_weekly_micro_iir_heal_breaker_resets_to_neutral_half() -> None:
+    state = update_weekly_micro_iir_state(MicroIIRState.initial(), h_t_raw=0.9)
+
+    state = update_weekly_micro_iir_state(state, h_t_raw=0.1)
+    state = update_weekly_micro_iir_state(state, h_t_raw=0.1)
+    state = update_weekly_micro_iir_state(state, h_t_raw=0.1)
+
+    assert state.h_t_lead_prev == pytest.approx(0.5)
+    assert state.envelope_internal_state == pytest.approx(0.5)
+    assert state.breaker_internal_state == "reset"
+
+
 def test_2026_05_01_consumes_last_real_prior_micro_state() -> None:
     state_before_2026_04_24 = prior_state()
 

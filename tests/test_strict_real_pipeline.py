@@ -53,18 +53,19 @@ def real_strict_results():
     return run_pipeline(inputs, contracts=contracts)
 
 
-# ── T10.1: at least one post-warmup week has non-null h_t and rho_t ──────────
+# ── T10.1: CSV/yfinance PIT simplification must not unlock strict mode ───────
 
 @_skip_if_no_micro()
-def test_real_strict_path_produces_nonnull_h_t(real_strict_results):
-    """With real stores, at least one post-warmup week has h_t and rho_t non-null."""
-    strict = [r for r in real_strict_results if r.mode == MODE_STRICT]
-    assert len(strict) > 0, (
-        "no strict rows produced — micro data coverage may not overlap with "
-        "post-warmup period or z_wrob_156 window is not yet satisfied"
-    )
-    assert all(r.h_t is not None for r in strict), "strict row has null h_t"
-    assert all(r.rho_t is not None for r in strict), "strict row has null rho_t"
+def test_csv_pit_path_degrades_instead_of_producing_strict_h_t(real_strict_results):
+    """CsvPITAdjustmentEngine is eod_same_day and must not produce production h_t."""
+    post_warmup = [r for r in real_strict_results if r.mode != MODE_WARMUP]
+
+    assert len(post_warmup) > 0
+    assert all(r.mode == MODE_DEGRADED for r in post_warmup)
+    assert all(r.h_t is None for r in post_warmup)
+    assert all(r.rho_t is None for r in post_warmup)
+    assert all(r.strict_contracts_satisfied is False for r in post_warmup)
+    assert all("pit_engine" in (r.degraded_reason or "") for r in post_warmup)
 
 
 # ── T10.2: strict_contracts_satisfied=True for real strict rows ──────────────

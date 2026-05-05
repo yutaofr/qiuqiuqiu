@@ -35,7 +35,8 @@ class MicroIIRState:
     """Weekly micro IIR and breaker state.
 
     Inputs:
-        h_t_lead_prev: Prior weekly lead micro fragility memory used by rho_t.
+        h_t_lead_prev: Prior weekly h_t^lead used by rho_t. Neutral/no-signal
+            value is 0.5; the IIR recurrence operates on (h_t^lead - 0.5)_+.
         heal_count: Consecutive strict low-micro weeks counted by the breaker.
         envelope_internal_state: Auditable copy of the current IIR envelope.
         breaker_internal_state: Human-readable breaker state.
@@ -57,9 +58,9 @@ class MicroIIRState:
     @staticmethod
     def initial() -> "MicroIIRState":
         return MicroIIRState(
-            h_t_lead_prev=0.0,
+            h_t_lead_prev=0.5,
             heal_count=0,
-            envelope_internal_state=0.0,
+            envelope_internal_state=0.5,
             breaker_internal_state="inactive",
             rho_update_state="initial",
             micro_state_frozen=False,
@@ -504,18 +505,21 @@ def update_weekly_micro_iir_state(
         raise ValueError("heal_weeks must be >= 1")
 
     h = float(h_t_raw)
-    h_t_lead = max(h, float(delta) * float(prior.h_t_lead_prev))
+    x_prev = max(float(prior.h_t_lead_prev) - 0.5, 0.0)
+    x_t = max(h - 0.5, 0.0)
+    x_t_lead = max(x_t, float(delta) * x_prev)
     heal_count = int(prior.heal_count)
     breaker_state = "inactive"
     if h < theta_heal:
         heal_count += 1
         breaker_state = "healing"
         if heal_count >= heal_weeks:
-            h_t_lead = h
+            x_t_lead = 0.0
             heal_count = 0
             breaker_state = "reset"
     else:
         heal_count = 0
+    h_t_lead = 0.5 + x_t_lead
 
     return MicroIIRState(
         h_t_lead_prev=h_t_lead,

@@ -39,6 +39,9 @@ from qqq_cycle.core.micro_layer import (
     compute_breadth,
     compute_correlation_concentration,
     compute_micro_score,
+    compute_smoothed_weights,
+    matured_member_sets,
+    should_hold_for_giant_missing_weight,
     update_micro_daily_state,
     update_weekly_micro_iir_state,
     weekly_median_micro,
@@ -179,6 +182,19 @@ def _value_or_nan(value: float | None) -> float:
     return float(value) if value is not None else float("nan")
 
 
+def _empty_weekly_h_t(weekly_index: pd.DatetimeIndex) -> pd.Series:
+    return pd.Series(float("nan"), index=weekly_index, name="h_t")
+
+
+def _strict_pit_engine_available(engine: object | None) -> bool:
+    """Return whether `engine` satisfies production strict PIT micro semantics."""
+
+    return (
+        isinstance(engine, PITAdjustmentEngine)
+        and getattr(engine, "asof_semantics", None) == "strict_pit"
+    )
+
+
 def _delta4(frame: pd.DataFrame, week_end: pd.Timestamp, column: str) -> float:
     if week_end not in frame.index:
         return float("nan")
@@ -207,6 +223,7 @@ def _build_audit_interpretability(
     h_t_available: bool,
     rho_t_available: bool,
     config: ModelConfig,
+    state_ok: bool = True,
 ) -> InterpretabilityRecord:
     """Build the model-spec I_t audit object from point-in-time layer outputs."""
 
@@ -225,7 +242,7 @@ def _build_audit_interpretability(
         h_macro=int(L_t is not None and T_t is not None and P_t is not None),
         h_exo=int(E_t is not None),
         h_micro=int(h_t_available),
-        h_state=1,
+        h_state=int(bool(state_ok)),
     )
     return build_interpretability(
         L_t=_value_or_nan(L_t),
@@ -290,6 +307,145 @@ def _build_interpretability(
     return row
 
 
+def _compute_daily_micro_frame(
+    trading_days: pd.DatetimeIndex,
+    contracts: PipelineContracts,
+) -> pd.DataFrame:
+    """Compute daily b_tau/c_tau from strict PIT stores.
+
+    Inputs:
+        trading_days: Daily decision dates to scan in chronological order.
+        contracts: Store-backed contracts with strict PIT price adjustment.
+
+    Output:
+        DataFrame indexed by trade date with daily `b_tau`, `c_tau`, and
+        `z_weight` for weekly robust standardization.
+
+    Time semantics:
+        Each row uses the current PIT constituent snapshot, previous trading
+        day's visible weights through the five-day smoothed lag, and PIT price
+        windows whose `asof` is the current daily EOD timestamp.
+
+    Failure modes:
+        MicroLayerUnavailableError: strict PIT adjustment is absent or a mature
+        member's mandatory PIT price window cannot be reconstructed.
+    """
+    pit_engine = contracts.pit_engine
+    constituent_store = contracts.constituent_store
+    weight_store = contracts.weight_store
+    if not _strict_pit_engine_available(pit_engine):
+        raise MicroLayerUnavailableError("strict PITAdjustmentEngine is required")
+    if constituent_store is None or weight_store is None:
+        raise MicroLayerUnavailableError("constituent and weight stores are required")
+
+    micro_state = MicroDailyState.empty()
+    daily_records: list[dict] = []
+    previous_day_weights: dict[str, float] | None = None
+    previous_smoothed: dict[str, float] = {}
+    previous_members: frozenset[str] | None = None
+    last_b_tau = float("nan")
+    last_c_tau = float("nan")
+
+    for day in trading_days:
+        trade_ts = pd.Timestamp(day).normalize()
+        # Use end-of-day asof so same-day EOD data (timestamped T16:00) is visible.
+        asof_eod = trade_ts + pd.Timedelta(hours=23, minutes=59, seconds=59)
+        try:
+            snapshot = constituent_store.get_snapshot(trade_ts, asof=asof_eod)
+        except DataNotAvailableError:
+            previous_day_weights = None
+            previous_members = None
+            continue
+        try:
+            raw_weights = weight_store.get_weights(trade_ts, asof=asof_eod)
+        except DataNotAvailableError:
+            previous_day_weights = None
+            previous_members = None
+            continue
+
+        has_constituent_change = (
+            previous_members is not None and snapshot.members != previous_members
+        )
+        micro_state = update_micro_daily_state(
+            micro_state, snapshot.members, trade_ts
+        )
+        if previous_day_weights is None:
+            previous_members = snapshot.members
+            previous_day_weights = dict(raw_weights)
+            daily_records.append(
+                {"date": trade_ts, "b_tau": np.nan, "c_tau": np.nan, "z_weight": 1.0}
+            )
+            continue
+
+        smoothed_weights = compute_smoothed_weights(
+            previous_smoothed,
+            previous_day_weights,
+            is_rule_window=has_constituent_change,
+        )
+        previous_smoothed = smoothed_weights
+        micro_state = micro_state.with_smoothed_weights(smoothed_weights)
+        missing_decision = should_hold_for_giant_missing_weight(micro_state)
+        v20, v60 = matured_member_sets(micro_state)
+        z_weight = (
+            0.3
+            if (
+                micro_state.data_contaminated
+                or has_constituent_change
+                or missing_decision.data_contaminated
+            )
+            else 1.0
+        )
+
+        if missing_decision.hold_micro_recompute:
+            b_tau = last_b_tau
+            c_tau = last_c_tau
+        else:
+            b_tau = compute_breadth(
+                members=v20,
+                smoothed_weights=smoothed_weights,
+                trade_date=trade_ts,
+                pit_engine=pit_engine,
+                asof=asof_eod,
+            )
+            price_windows: dict[str, pd.Series] = {}
+            for ticker in sorted(v60):
+                w = float(smoothed_weights.get(ticker, 0.0))
+                if w <= 0.0:
+                    continue
+                try:
+                    window = pit_engine.get_adjusted_window(
+                        ticker, trade_ts, 60, asof=asof_eod
+                    )
+                except DataNotAvailableError as exc:
+                    raise MicroLayerUnavailableError(
+                        f"missing PIT 60-day adjusted window for {ticker} on {trade_ts.date()}"
+                    ) from exc
+                if len(pd.Series(window).dropna()) < 60:
+                    raise MicroLayerUnavailableError(
+                        f"need 60 PIT adjusted closes for {ticker}; got {len(pd.Series(window).dropna())}"
+                    )
+                price_windows[ticker] = window
+            c_tau = compute_correlation_concentration(
+                members=v60,
+                smoothed_weights=smoothed_weights,
+                price_windows=price_windows,
+            )
+            if np.isfinite(b_tau):
+                last_b_tau = b_tau
+            if np.isfinite(c_tau):
+                last_c_tau = c_tau
+
+        daily_records.append(
+            {"date": trade_ts, "b_tau": b_tau, "c_tau": c_tau, "z_weight": z_weight}
+        )
+        previous_members = snapshot.members
+        previous_day_weights = dict(raw_weights)
+
+    if not daily_records:
+        return pd.DataFrame(columns=["b_tau", "c_tau", "z_weight"])
+    return pd.DataFrame(daily_records).set_index("date")
+
+
 def _compute_weekly_h_t_from_stores(
     weekly_index: pd.DatetimeIndex,
     contracts: PipelineContracts,
@@ -302,78 +458,25 @@ def _compute_weekly_h_t_from_stores(
     applies compute_micro_score to produce h_t per week.  Returns a pd.Series
     aligned to weekly_index; weeks without sufficient data carry NaN.
     """
-    pit_engine = contracts.pit_engine
-    constituent_store = contracts.constituent_store
-    weight_store = contracts.weight_store
+    del config
 
     start = weekly_index.min()
     end = weekly_index.max()
     trading_days = pd.bdate_range(start=start, end=end)
 
-    micro_state = MicroDailyState.empty()
-    daily_records: list[dict] = []
+    try:
+        daily_df = _compute_daily_micro_frame(trading_days, contracts)
+    except MicroLayerUnavailableError:
+        return _empty_weekly_h_t(weekly_index)
 
-    for day in trading_days:
-        trade_ts = pd.Timestamp(day).normalize()
-        # Use end-of-day asof so same-day EOD data (timestamped T16:00) is visible.
-        asof_eod = trade_ts + pd.Timedelta(hours=23, minutes=59, seconds=59)
-        try:
-            snapshot = constituent_store.get_snapshot(trade_ts, asof=asof_eod)
-        except DataNotAvailableError:
-            continue
-        try:
-            raw_weights = weight_store.get_weights(trade_ts, asof=asof_eod)
-        except DataNotAvailableError:
-            continue
-
-        micro_state = update_micro_daily_state(
-            micro_state, snapshot.members, trade_ts
-        )
-        micro_state = micro_state.with_smoothed_weights(raw_weights)
-
-        try:
-            b_tau = compute_breadth(
-                members=micro_state.present_members,
-                smoothed_weights=dict(micro_state.smoothed_weights),
-                trade_date=trade_ts,
-                pit_engine=pit_engine,
-                asof=asof_eod,
-            )
-        except MicroLayerUnavailableError:
-            b_tau = float("nan")
-
-        c_tau = float("nan")
-        try:
-            price_windows: dict[str, pd.Series] = {}
-            for ticker in sorted(micro_state.present_members):
-                w = float(micro_state.smoothed_weights.get(ticker, 0.0))
-                if w <= 0.0:
-                    continue
-                try:
-                    price_windows[ticker] = pit_engine.get_adjusted_window(
-                        ticker, trade_ts, 60, asof=asof_eod
-                    )
-                except DataNotAvailableError:
-                    pass
-            c_tau = compute_correlation_concentration(
-                members=micro_state.present_members,
-                smoothed_weights=dict(micro_state.smoothed_weights),
-                price_windows=price_windows,
-            )
-        except MicroLayerUnavailableError:
-            c_tau = float("nan")
-
-        daily_records.append({"date": trade_ts, "b_tau": b_tau, "c_tau": c_tau})
-
-    if not daily_records:
-        return pd.Series(float("nan"), index=weekly_index, name="h_t")
-
-    daily_df = pd.DataFrame(daily_records).set_index("date")
+    if daily_df.empty:
+        return _empty_weekly_h_t(weekly_index)
     weekly_bc = weekly_median_micro(daily_df)
 
-    uniform_weights = pd.Series(1.0, index=weekly_bc.index)
-    b_z = z_wrob_156(weekly_bc["b_wk"], weights=uniform_weights)
-    c_z = z_wrob_156(weekly_bc["c_wk"], weights=uniform_weights)
+    weekly_z_weights = daily_df["z_weight"].resample("W-FRI", label="right", closed="right").min()
+    weekly_z_weights = weekly_z_weights.reindex(weekly_bc.index).fillna(1.0)
+    b_z = z_wrob_156(weekly_bc["b_wk"], weights=weekly_z_weights)
+    c_z = z_wrob_156(weekly_bc["c_wk"], weights=weekly_z_weights)
 
     h_t_weekly = pd.Series(float("nan"), index=weekly_bc.index, name="h_t")
     for idx in weekly_bc.index:
@@ -428,15 +531,18 @@ def run_pipeline(
         and contracts.constituent_store is not None
         and contracts.weight_store is not None
     ):
-        computed_h_t = _compute_weekly_h_t_from_stores(
-            weekly_macro_inputs.index, contracts, config
+        strict_pit_available = _strict_pit_engine_available(contracts.pit_engine)
+        computed_h_t = (
+            _compute_weekly_h_t_from_stores(weekly_macro_inputs.index, contracts, config)
+            if strict_pit_available
+            else None
         )
         contracts = PipelineContracts(
             weekly_h_t=computed_h_t,
             pit_engine=contracts.pit_engine,
             constituent_store=contracts.constituent_store,
             weight_store=contracts.weight_store,
-            pit_engine_available=True,
+            pit_engine_available=strict_pit_available,
             constituents_available=True,
             weights_available=True,
         )
@@ -486,7 +592,7 @@ def run_pipeline(
 
     # IIR h_t^lead state — initialized BEFORE the loop (Option B).
     # These must not be reset inside the loop; they carry state across weeks.
-    h_t_lead_prev: float = 0.0
+    h_t_lead_prev: float = 0.5
     heal_count: int = 0
 
     omega_state = np.asarray(config.risk.omega_state, dtype=float)
@@ -626,8 +732,9 @@ def run_pipeline(
                     n_t = float(risk.n_t)
                     rho_t = float(risk.rho_t)
 
-            strict_contracts_satisfied = (
-                contracts.pit_engine_available  # type: ignore[union-attr]
+            strict_contracts_satisfied = bool(
+                h_t is not None
+                and contracts.pit_engine_available  # type: ignore[union-attr]
                 and contracts.constituents_available  # type: ignore[union-attr]
                 and contracts.weights_available  # type: ignore[union-attr]
             )
@@ -661,6 +768,11 @@ def run_pipeline(
             h_t_available=h_t is not None,
             rho_t_available=rho_t is not None,
             config=config,
+            state_ok=bool(
+                cov_state.state_ok
+                and stress_result.velocity_cov_state.state_ok
+                and stress_result.acceleration_cov_state.state_ok
+            ),
         )
 
         results.append(

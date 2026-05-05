@@ -45,6 +45,7 @@ from qqq_cycle.pipeline import (
     _build_audit_interpretability,
     _build_interpretability,
     _compute_weekly_h_t_from_stores,
+    _strict_pit_engine_available,
     MODE_WARMUP,
     MODE_DEGRADED,
     MODE_STRICT,
@@ -270,6 +271,7 @@ def _run_pipeline_step(
         h_t_available=h_t is not None,
         rho_t_available=rho_t is not None,
         config=config,
+        state_ok=bool(cov_state.state_ok),
     )
 
     result = PipelineResult(
@@ -439,15 +441,18 @@ class LiveRuntime:
             # We need historical breadths and correlations for z_wrob_156 (156 weeks).
             # Passing a 200-week index ensures we have enough data for a robust z-score.
             full_week_index = pd.date_range(end=week_ts, periods=200, freq="W-FRI")
-            computed_h_t = _compute_weekly_h_t_from_stores(
-                full_week_index, contracts, self.config
+            strict_pit_available = _strict_pit_engine_available(contracts.pit_engine)
+            computed_h_t = (
+                _compute_weekly_h_t_from_stores(full_week_index, contracts, self.config)
+                if strict_pit_available
+                else None
             )
             resolved_contracts = PipelineContracts(
                 weekly_h_t=computed_h_t,
                 pit_engine=contracts.pit_engine,
                 constituent_store=contracts.constituent_store,
                 weight_store=contracts.weight_store,
-                pit_engine_available=True,
+                pit_engine_available=strict_pit_available,
                 constituents_available=True,
                 weights_available=True,
             )
