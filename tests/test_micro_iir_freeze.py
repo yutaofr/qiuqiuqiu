@@ -108,3 +108,34 @@ def test_2026_05_01_consumes_last_real_prior_micro_state() -> None:
     assert state_after_2026_04_24_degraded.micro_state_frozen is True
     assert state_after_2026_05_01.h_t_lead_prev == pytest.approx(0.8)
     assert state_after_2026_05_01.rho_update_state == "strict_observation"
+
+
+def test_missing_observation_causes_decay_and_heal_reset() -> None:
+    before = prior_state()  # h_t_lead_prev=0.72, heal_count=2
+
+    after = update_weekly_micro_iir_state(
+        before,
+        h_t_raw=None,
+        backfill_mode=None,
+        delta=0.9,
+    )
+
+    # 0.5 + 0.9 * (0.72 - 0.5) = 0.5 + 0.9 * 0.22 = 0.5 + 0.198 = 0.698
+    assert after.h_t_lead_prev == pytest.approx(0.698)
+    assert after.heal_count == 0  # Reset because health not confirmed
+    assert after.rho_update_state == "decayed_missing_observation"
+    assert after.micro_state_frozen is False
+
+
+def test_nan_observation_causes_decay_and_heal_reset() -> None:
+    import numpy as np
+    before = prior_state()
+
+    after = update_weekly_micro_iir_state(
+        before,
+        h_t_raw=float("nan"),
+        delta=0.9,
+    )
+
+    assert after.h_t_lead_prev == pytest.approx(0.698)
+    assert after.heal_count == 0

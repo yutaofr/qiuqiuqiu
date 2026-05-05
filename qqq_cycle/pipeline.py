@@ -693,18 +693,20 @@ def run_pipeline(
             else:
                 h_t_raw = None
 
-            if h_t_raw is not None:
-                micro_iir_state = update_weekly_micro_iir_state(
-                    micro_iir_state,
-                    h_t_raw=h_t_raw,
-                    delta=config.micro.iir_delta,
-                    theta_heal=config.micro.heal_threshold,
-                    heal_weeks=_HEAL_CIRCUIT_WEEKS,
-                )
-                h_t_lead = micro_iir_state.h_t_lead_prev
-                h_t_lead_prev = micro_iir_state.h_t_lead_prev
-                heal_count = micro_iir_state.heal_count
+            # Advance IIR state every week post-warmup (decay on missing observation)
+            micro_iir_state = update_weekly_micro_iir_state(
+                micro_iir_state,
+                h_t_raw=h_t_raw,
+                backfill_mode=backfill_mode,
+                delta=config.micro.iir_delta,
+                theta_heal=config.micro.heal_threshold,
+                heal_weeks=_HEAL_CIRCUIT_WEEKS,
+            )
+            h_t_lead = micro_iir_state.h_t_lead_prev
+            h_t_lead_prev = micro_iir_state.h_t_lead_prev
+            heal_count = micro_iir_state.heal_count
 
+            if h_t_raw is not None:
                 h_t = h_t_raw
 
                 # Compute omega_t for rho_t.

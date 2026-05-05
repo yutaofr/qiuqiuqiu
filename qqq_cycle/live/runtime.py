@@ -212,8 +212,7 @@ def _run_pipeline_step(
         h_t_lead_prev = micro_iir_state.h_t_lead_prev
         heal_count = micro_iir_state.heal_count
         strict_contracts_satisfied = False
-    elif can_compute_h_t and h_t_raw is not None:
-        delta_abs = abs(drift_raw) if drift_raw is not None else 0.0
+    elif can_compute_h_t:
         micro_iir_state = update_weekly_micro_iir_state(
             micro_iir_state,
             h_t_raw=h_t_raw,
@@ -225,24 +224,27 @@ def _run_pipeline_step(
         h_t_lead = micro_iir_state.h_t_lead_prev
         h_t_lead_prev = micro_iir_state.h_t_lead_prev
         heal_count = micro_iir_state.heal_count
-        h_t = h_t_raw
-        if p_t is not None and s_t is not None:
-            omega_t = blended_state_weight(
-                np.asarray(p_t, dtype=float),
-                omega_state,
-                delta_abs,
-                theta_lo=config.drift.theta_lo,
-                theta_hi=config.drift.theta_hi,
-            )
-            risk: RiskScore = compute_risk_score(
-                omega_t=omega_t,
-                s_t=s_t,
-                h_t_lead=h_t_lead,
-                lambda_rho=config.risk.lambda_rho,
-            )
-            n_t = float(risk.n_t)
-            rho_t = float(risk.rho_t)
-        strict_contracts_satisfied = True
+
+        if h_t_raw is not None:
+            h_t = h_t_raw
+            delta_abs = abs(drift_raw) if drift_raw is not None else 0.0
+            if p_t is not None and s_t is not None:
+                omega_t = blended_state_weight(
+                    np.asarray(p_t, dtype=float),
+                    omega_state,
+                    delta_abs,
+                    theta_lo=config.drift.theta_lo,
+                    theta_hi=config.drift.theta_hi,
+                )
+                risk: RiskScore = compute_risk_score(
+                    omega_t=omega_t,
+                    s_t=s_t,
+                    h_t_lead=h_t_lead,
+                    lambda_rho=config.risk.lambda_rho,
+                )
+                n_t = float(risk.n_t)
+                rho_t = float(risk.rho_t)
+            strict_contracts_satisfied = True
 
     mode = MODE_STRICT if h_t is not None else MODE_DEGRADED
     if mode == MODE_STRICT:

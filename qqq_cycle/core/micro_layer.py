@@ -491,12 +491,17 @@ def update_weekly_micro_iir_state(
             micro_state_frozen=True,
         )
     if h_t_raw is None or not np.isfinite(float(h_t_raw)):
+        # Missing observation: apply decay but do not count towards healing.
+        x_prev = max(float(prior.h_t_lead_prev) - 0.5, 0.0)
+        x_t_lead = float(delta) * x_prev
+        h_t_lead = 0.5 + x_t_lead
+
         return MicroIIRState(
-            h_t_lead_prev=prior.h_t_lead_prev,
-            heal_count=prior.heal_count,
-            envelope_internal_state=prior.envelope_internal_state,
-            breaker_internal_state=prior.breaker_internal_state,
-            rho_update_state=prior.rho_update_state,
+            h_t_lead_prev=h_t_lead,
+            heal_count=0,  # Reset: health not confirmed during gap
+            envelope_internal_state=h_t_lead,
+            breaker_internal_state="inactive",
+            rho_update_state="decayed_missing_observation",
             micro_state_frozen=False,
         )
     if not 0.0 <= delta <= 1.0:
