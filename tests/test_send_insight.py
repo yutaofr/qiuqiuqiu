@@ -240,3 +240,63 @@ def test_webhook_is_not_logged_in_dry_run(tmp_path: Path, monkeypatch: pytest.Mo
     assert exit_code == 0
     assert "webhook-secret" not in captured.out
     assert "discord.example" not in captured.out
+
+
+def test_retry_after_too_large_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    markdown_path = _write_markdown(tmp_path / "insight.md", "# Weekly Digest\n\nhello")
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.example/webhook")
+
+    def _fake_urlopen(req, timeout=None):  # type: ignore[no-untyped-def]
+        raise HTTPError(req.full_url, 429, "Too Many Requests", {"Retry-After": "600"}, None)
+
+    monkeypatch.setattr(send_insight.request, "urlopen", _fake_urlopen)
+
+    exit_code = send_insight.main(
+        [
+            "--mode",
+            "insight",
+            "--input",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code != 0
+
+
+def test_retry_after_logs_message(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    markdown_path = _write_markdown(tmp_path / "insight.md", "# Weekly Digest\n\nhello")
+    monkeypatch.setenv("DISCORD_WEBHOOK_URL", "https://discord.example/webhook")
+
+    calls = []
+
+    def _fake_urlopen(req, timeout=None):  # type: ignore[no-untyped-def]
+        calls.append(req)
+        if len(calls) == 1:
+            raise HTTPError(req.full_url, 429, "Too Many Requests", {"Retry-After": "0.1"}, None)
+
+        class _Resp:
+            status = 204
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):  # type: ignore[no-untyped-def]
+                pass
+
+        return _Resp()
+
+    monkeypatch.setattr(send_insight.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(send_insight.time, "sleep", lambda x: None)
+
+    exit_code = send_insight.main(
+        [
+            "--mode",
+            "insight",
+            "--input",
+            str(markdown_path),
+        ]
+    )
+
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "Discord 429: Rate limited. Retrying after 0.1s" in captured.err

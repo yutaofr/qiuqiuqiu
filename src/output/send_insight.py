@@ -169,6 +169,13 @@ def _post_webhook(webhook_url: str, payload: dict[str, Any]) -> None:
                     retry_after = float(retry_after_raw)
                 except (TypeError, ValueError):
                     retry_after = 1.0
+                
+                # Safety cap: don't sleep for more than 5 minutes in a scheduled task
+                MAX_RETRY_SLEEP = 300.0
+                if retry_after > MAX_RETRY_SLEEP:
+                    raise RuntimeError(f"Discord webhook rate limited with excessive Retry-After: {retry_after}s (limit {MAX_RETRY_SLEEP}s)") from exc
+                
+                print(f"Discord 429: Rate limited. Retrying after {retry_after}s (attempt {attempt + 1}/{MAX_ATTEMPTS})", file=sys.stderr)
                 time.sleep(retry_after)
                 continue
             raise RuntimeError(f"Discord webhook failed with HTTP {exc.code}") from exc
